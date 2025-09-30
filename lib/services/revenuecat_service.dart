@@ -1,0 +1,74 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+
+class RevenueCatService {
+  RevenueCatService._();
+  static final RevenueCatService instance = RevenueCatService._();
+
+  bool _initialized = false;
+
+  Future<void> initialize(String iosPublicSdkKey) async {
+    if (kIsWeb) return; // not supported on web
+    // Only configure on iOS for now
+    if (!Platform.isIOS) return;
+    if (iosPublicSdkKey.isEmpty) return;
+
+    await Purchases.setLogLevel(LogLevel.warn);
+    final configuration = PurchasesConfiguration(iosPublicSdkKey);
+    await Purchases.configure(configuration);
+    _initialized = true;
+  }
+
+  Future<void> identify(String appUserId) async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return;
+    if (appUserId.isEmpty) return;
+    try {
+      await Purchases.logIn(appUserId);
+    } catch (_) {}
+  }
+
+  Future<void> logout() async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return;
+    try {
+      await Purchases.logOut();
+    } catch (_) {}
+  }
+
+  Future<Offerings?> getOfferings() async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    try {
+      return await Purchases.getOfferings();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<CustomerInfo?> purchasePackage(Package pkg) async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    try {
+      final info = await Purchases.purchasePackage(pkg);
+      return info;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<CustomerInfo?> restorePurchases() async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    try {
+      return await Purchases.restorePurchases();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<CustomerInfo?> getCustomerInfo() async {
+    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    try {
+      return await Purchases.getCustomerInfo();
+    } catch (_) {
+      return null;
+    }
+  }
+}
