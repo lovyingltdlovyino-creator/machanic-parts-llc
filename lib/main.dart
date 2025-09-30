@@ -143,32 +143,37 @@ Future<void> main() async {
   print('[Init] NotificationService initialized');
 
   // Initialize RevenueCat (iOS only)
-  final rcKey = (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '').trim();
   // ignore: avoid_print
   print('[Init] Init RevenueCat');
   try {
-    await RevenueCatService.instance.initialize(rcKey);
-    // ignore: avoid_print
-    print('[Init] RevenueCat initialized');
-
-    final currentUser = Supabase.instance.client.auth.currentUser;
-    // ignore: avoid_print
-    print('[Init] currentUser=${currentUser != null}');
-    if (currentUser != null) {
-      await RevenueCatService.instance.identify(currentUser.id);
+    if (kIsWeb) {
       // ignore: avoid_print
-      print('[Init] RevenueCat identify done');
-    }
+      print('[Init] RevenueCat skipped on web');
+    } else {
+      final rcKey = (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '').trim();
+      await RevenueCatService.instance.initialize(rcKey);
+      // ignore: avoid_print
+      print('[Init] RevenueCat initialized');
 
-    // Set up auth listener
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      final user = data.session?.user;
-      if (user != null) {
-        await RevenueCatService.instance.identify(user.id);
-      } else {
-        await RevenueCatService.instance.logout();
+      final currentUser = Supabase.instance.client.auth.currentUser;
+      // ignore: avoid_print
+      print('[Init] currentUser=${currentUser != null}');
+      if (currentUser != null) {
+        await RevenueCatService.instance.identify(currentUser.id);
+        // ignore: avoid_print
+        print('[Init] RevenueCat identify done');
       }
-    });
+
+      // Set up auth listener
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+        final user = data.session?.user;
+        if (user != null) {
+          await RevenueCatService.instance.identify(user.id);
+        } else {
+          await RevenueCatService.instance.logout();
+        }
+      });
+    }
 
     // ignore: avoid_print
     print('[Init] Before runApp');
