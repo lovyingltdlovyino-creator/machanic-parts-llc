@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show TargetPlatform; 
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class RevenueCatService {
@@ -11,7 +11,7 @@ class RevenueCatService {
   Future<void> initialize(String iosPublicSdkKey) async {
     if (kIsWeb) return; // not supported on web
     // Only configure on iOS for now
-    if (!Platform.isIOS) return;
+    if (defaultTargetPlatform != TargetPlatform.iOS) return;
     if (iosPublicSdkKey.isEmpty) return;
 
     await Purchases.setLogLevel(LogLevel.warn);
@@ -21,7 +21,7 @@ class RevenueCatService {
   }
 
   Future<void> identify(String appUserId) async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
     if (appUserId.isEmpty) return;
     try {
       await Purchases.logIn(appUserId);
@@ -29,14 +29,14 @@ class RevenueCatService {
   }
 
   Future<void> logout() async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
     try {
       await Purchases.logOut();
     } catch (_) {}
   }
 
   Future<Offerings?> getOfferings() async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
     try {
       return await Purchases.getOfferings();
     } catch (_) {
@@ -45,7 +45,7 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> purchasePackage(Package pkg) async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
     try {
       final info = await Purchases.purchasePackage(pkg);
       return info;
@@ -55,7 +55,7 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> restorePurchases() async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
     try {
       return await Purchases.restorePurchases();
     } catch (_) {
@@ -64,7 +64,7 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> getCustomerInfo() async {
-    if (!_initialized || kIsWeb || !Platform.isIOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
     try {
       return await Purchases.getCustomerInfo();
     } catch (_) {

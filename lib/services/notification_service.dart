@@ -15,10 +15,16 @@ class NotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
+    if (kIsWeb) {
+      // Skip plugin initialization on web (plugin not supported)
+      _isInitialized = true;
+      return;
+    }
+
     // Request permissions
     await _requestPermissions();
 
-    // Initialize notifications
+    // Initialize notifications (mobile only)
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -73,12 +79,20 @@ class NotificationService {
   }) async {
     if (!_isInitialized) await initialize();
 
+    // Web: only play sound; skip plugin to avoid MissingPluginException
+    if (kIsWeb) {
+      if (playSound) {
+        await _playNotificationSound();
+      }
+      return;
+    }
+
     // Play notification sound
     if (playSound) {
       await _playNotificationSound();
     }
 
-    // Show notification
+    // Show notification (mobile only)
     const androidDetails = AndroidNotificationDetails(
       'chat_messages',
       'Chat Messages',

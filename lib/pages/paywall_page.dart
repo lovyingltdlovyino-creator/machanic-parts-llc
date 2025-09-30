@@ -1,5 +1,5 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../services/revenuecat_service.dart';
@@ -26,7 +26,7 @@ class _PaywallPageState extends State<PaywallPage> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      if (kIsWeb || !Platform.isIOS) {
+      if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
         setState(() { _error = 'RevenueCat purchases are iOS-only in this build.'; });
         return;
       }
