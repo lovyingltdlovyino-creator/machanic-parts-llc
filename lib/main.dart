@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
@@ -53,6 +54,22 @@ Future<void> main() async {
     FlutterError.presentError(details);
     // On web, also render an error screen instead of a blank page
     runApp(ErrorScreen(error: details.exceptionAsString()));
+  };
+  // Also capture errors that escape FlutterError and zones (helps on web release)
+  ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    // ignore: avoid_print
+    print('[GlobalError] $error');
+    runApp(ErrorScreen(error: error.toString()));
+    return true;
+  };
+  // Replace red error boxes with a readable widget if a build fails
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    // ignore: avoid_print
+    print('[BuildError] ${details.exceptionAsString()}');
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Center(child: Text('Error: ${details.exceptionAsString()}')),
+    );
   };
   
   // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
@@ -106,18 +123,32 @@ Future<void> main() async {
   }
 
   try {
+    // ignore: avoid_print
+    print('[Init] Starting Supabase.initialize');
     await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+    // ignore: avoid_print
+    print('[Init] Supabase initialized');
   } catch (e) {
+    // ignore: avoid_print
+    print('[Init] Supabase init failed: $e');
     runApp(ErrorScreen(error: 'Supabase init failed: $e'));
     return;
   }
   
   // Initialize notification service
+  // ignore: avoid_print
+  print('[Init] Init NotificationService');
   await NotificationService().initialize();
+  // ignore: avoid_print
+  print('[Init] NotificationService initialized');
 
   // Initialize RevenueCat (iOS only)
   final rcKey = (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '').trim();
+  // ignore: avoid_print
+  print('[Init] Init RevenueCat');
   await RevenueCatService.instance.initialize(rcKey);
+  // ignore: avoid_print
+  print('[Init] RevenueCat initialized');
   final currentUser = Supabase.instance.client.auth.currentUser;
   if (currentUser != null) {
     await RevenueCatService.instance.identify(currentUser.id);
@@ -131,8 +162,18 @@ Future<void> main() async {
     }
   });
   
+  // ignore: avoid_print
+  print('[Init] Before runApp');
   runZonedGuarded(() {
-    runApp(const MechanicPartApp());
+    try {
+      // ignore: avoid_print
+      print('[Init] runApp start');
+      runApp(const MechanicPartApp());
+    } catch (e) {
+      // ignore: avoid_print
+      print('runApp sync error: $e');
+      runApp(ErrorScreen(error: 'runApp error: $e'));
+    }
   }, (error, stack) {
     // ignore: avoid_print
     print('Uncaught zone error: $error');
