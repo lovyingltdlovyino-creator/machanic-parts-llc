@@ -19,6 +19,13 @@ const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Capture all uncaught Flutter and zone errors, show a friendly screen on web
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // On web, also render an error screen instead of a blank page
+    runApp(ErrorScreen(error: details.exceptionAsString()));
+  };
   
   // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
   if (!kIsWeb) {
@@ -27,6 +34,32 @@ Future<void> main() async {
     } catch (e) {
       // ignore in production builds where .env may not exist
     }
+
+class ErrorScreen extends StatelessWidget {
+  final String error;
+  const ErrorScreen({super.key, required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Something went wrong', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                Text(error, textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
   }
   
   final supabaseUrl = (kSupabaseUrlFromDefine.isNotEmpty
@@ -37,6 +70,12 @@ Future<void> main() async {
           ? kSupabaseAnonFromDefine
           : dotenv.env['SUPABASE_ANON_KEY'])
       ?.trim() ?? '';
+  // Minimal debug prints (no secrets)
+  try {
+    final host = Uri.tryParse(supabaseUrl)?.host ?? '';
+    // ignore: avoid_print
+    print('[Init] isWeb=$kIsWeb supabaseHost=$host anonLen=${supabaseAnonKey.length}');
+  } catch (_) {}
   
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
     runApp(MaterialApp(
@@ -63,7 +102,12 @@ Future<void> main() async {
     return;
   }
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  try {
+    await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  } catch (e) {
+    runApp(ErrorScreen(error: 'Supabase init failed: $e'));
+    return;
+  }
   
   // Initialize notification service
   await NotificationService().initialize();
@@ -84,7 +128,13 @@ Future<void> main() async {
     }
   });
   
-  runApp(const MechanicPartApp());
+  runZonedGuarded(() {
+    runApp(const MechanicPartApp());
+  }, (error, stack) {
+    // ignore: avoid_print
+    print('Uncaught zone error: $error');
+    runApp(ErrorScreen(error: error.toString()));
+  });
 }
 
 // Branding
