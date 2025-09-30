@@ -146,24 +146,38 @@ Future<void> main() async {
   final rcKey = (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '').trim();
   // ignore: avoid_print
   print('[Init] Init RevenueCat');
-  await RevenueCatService.instance.initialize(rcKey);
-  // ignore: avoid_print
-  print('[Init] RevenueCat initialized');
-  final currentUser = Supabase.instance.client.auth.currentUser;
-  if (currentUser != null) {
-    await RevenueCatService.instance.identify(currentUser.id);
-  }
-  Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-    final user = data.session?.user;
-    if (user != null) {
-      await RevenueCatService.instance.identify(user.id);
-    } else {
-      await RevenueCatService.instance.logout();
+  try {
+    await RevenueCatService.instance.initialize(rcKey);
+    // ignore: avoid_print
+    print('[Init] RevenueCat initialized');
+
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    // ignore: avoid_print
+    print('[Init] currentUser=${currentUser != null}');
+    if (currentUser != null) {
+      await RevenueCatService.instance.identify(currentUser.id);
+      // ignore: avoid_print
+      print('[Init] RevenueCat identify done');
     }
-  });
-  
-  // ignore: avoid_print
-  print('[Init] Before runApp');
+
+    // Set up auth listener
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final user = data.session?.user;
+      if (user != null) {
+        await RevenueCatService.instance.identify(user.id);
+      } else {
+        await RevenueCatService.instance.logout();
+      }
+    });
+
+    // ignore: avoid_print
+    print('[Init] Before runApp');
+  } catch (e) {
+    // ignore: avoid_print
+    print('[Boot] post-init error: $e');
+    runApp(ErrorScreen(error: 'Boot error: $e'));
+    return;
+  }
   runZonedGuarded(() {
     try {
       // ignore: avoid_print
