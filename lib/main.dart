@@ -11,6 +11,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
+import 'widgets/footer.dart';
 
 // Allow configuring Supabase via --dart-define with .env fallback
 import 'pages/billing_page.dart';
@@ -215,7 +216,7 @@ class MechanicPartApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Mechanic Part',
+      title: 'Mechanic Part LLC',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -390,15 +391,17 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(
-                Icons.build_circle,
-                size: 80,
-                color: AppColors.primary,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Image.asset(
+                  'assets/images/logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
             const SizedBox(height: 24),
             Text(
-              'Mechanic Part',
+              'Mechanic Part LLC',
               style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
@@ -935,18 +938,27 @@ class _WebHomeShellState extends State<WebHomeShell> {
                 // Brand
                 Row(
                   children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 36,
+                        width: 36,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 36,
+                          width: 36,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.build_rounded, color: Colors.white, size: 20),
+                        ),
                       ),
-                      child: const Icon(Icons.build_rounded, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Mechanic Part',
+                      'Mechanic Part LLC',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1062,14 +1074,21 @@ class _WebHomeShellState extends State<WebHomeShell> {
           ),
           const VerticalDivider(width: 1),
           Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: pages[safeIndex],
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: pages[safeIndex],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                const Footer(),
+              ],
             ),
           ),
         ],
