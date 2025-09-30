@@ -17,6 +17,10 @@ import 'widgets/footer.dart';
 import 'pages/billing_page.dart';
 import 'pages/admin_page.dart';
 import 'pages/paywall_page.dart';
+import 'pages/about_page.dart';
+import 'pages/contact_page.dart';
+import 'pages/privacy_page.dart';
+import 'pages/terms_page.dart';
 const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 
@@ -216,7 +220,7 @@ class MechanicPartApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Mechanic Part LLC',
+      title: 'Mechanic Part',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -272,6 +276,22 @@ final _router = GoRouter(
     GoRoute(
       path: '/admin',
       builder: (context, state) => const AdminPage(),
+    ),
+    GoRoute(
+      path: '/about',
+      builder: (context, state) => const AboutPage(),
+    ),
+    GoRoute(
+      path: '/contact',
+      builder: (context, state) => const ContactPage(),
+    ),
+    GoRoute(
+      path: '/privacy',
+      builder: (context, state) => const PrivacyPage(),
+    ),
+    GoRoute(
+      path: '/terms',
+      builder: (context, state) => const TermsPage(),
     ),
   ],
 );
@@ -391,17 +411,15 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Image.asset(
-                  'assets/images/logo.png',
-                  fit: BoxFit.contain,
-                ),
+              child: const Icon(
+                Icons.build_circle,
+                size: 80,
+                color: AppColors.primary,
               ),
             ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
             const SizedBox(height: 24),
             Text(
-              'Mechanic Part LLC',
+              'Mechanic Part',
               style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
@@ -938,27 +956,18 @@ class _WebHomeShellState extends State<WebHomeShell> {
                 // Brand
                 Row(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        height: 36,
-                        width: 36,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 36,
-                          width: 36,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.build_rounded, color: Colors.white, size: 20),
-                        ),
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.build_rounded, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Mechanic Part LLC',
+                      'Mechanic Part',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1074,21 +1083,14 @@ class _WebHomeShellState extends State<WebHomeShell> {
           ),
           const VerticalDivider(width: 1),
           Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: pages[safeIndex],
-                      ),
-                    ),
-                  ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: pages[safeIndex],
                 ),
-                const Footer(),
-              ],
+              ),
             ),
           ),
         ],
@@ -1607,6 +1609,7 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
             ),
 
           const SizedBox(height: 32),
+          if (kIsWeb) const Footer(),
         ],
       ),
     );
