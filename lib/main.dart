@@ -39,10 +39,30 @@ Future<void> main() async {
       ?.trim() ?? '';
   
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-    // ignore: avoid_print
-    print('[Mechanic Part] Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env file');
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text('Missing configuration', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                SizedBox(height: 12),
+                Text(
+                  'SUPABASE_URL or SUPABASE_ANON_KEY is not provided.\n' 
+                  'On Netlify, set them in Site → Build & deploy → Environment and redeploy.',
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    return;
   }
-  
+
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   
   // Initialize notification service
