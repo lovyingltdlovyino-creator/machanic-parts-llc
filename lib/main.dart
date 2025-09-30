@@ -17,24 +17,7 @@ import 'pages/paywall_page.dart';
 const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Capture all uncaught Flutter and zone errors, show a friendly screen on web
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    // On web, also render an error screen instead of a blank page
-    runApp(ErrorScreen(error: details.exceptionAsString()));
-  };
-  
-  // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
-  if (!kIsWeb) {
-    try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      // ignore in production builds where .env may not exist
-    }
-
+// A simple error screen to show fatal errors instead of a blank page (used on web too)
 class ErrorScreen extends StatelessWidget {
   final String error;
   const ErrorScreen({super.key, required this.error});
@@ -60,6 +43,25 @@ class ErrorScreen extends StatelessWidget {
     );
   }
 }
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Capture all uncaught Flutter and zone errors, show a friendly screen on web
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    // On web, also render an error screen instead of a blank page
+    runApp(ErrorScreen(error: details.exceptionAsString()));
+  };
+  
+  // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
+  if (!kIsWeb) {
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      // ignore in production builds where .env may not exist
+    }
+    // ErrorScreen moved to top-level
   }
   
   final supabaseUrl = (kSupabaseUrlFromDefine.isNotEmpty
