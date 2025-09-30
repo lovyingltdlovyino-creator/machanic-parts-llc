@@ -20,12 +20,13 @@ const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Load environment variables (optional in production)
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    // ignore in production builds where .env is not bundled
-    // print('[Mechanic Part] .env not found, using --dart-define values');
+  // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
+  if (!kIsWeb) {
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      // ignore in production builds where .env may not exist
+    }
   }
   
   final supabaseUrl = (kSupabaseUrlFromDefine.isNotEmpty
