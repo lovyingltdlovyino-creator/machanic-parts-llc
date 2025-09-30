@@ -220,7 +220,7 @@ class MechanicPartApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Mechanic Part',
+      title: 'Mechanic Part LLC',
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -419,7 +419,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
             const SizedBox(height: 24),
             Text(
-              'Mechanic Part',
+              'Mechanic Part LLC',
               style: GoogleFonts.poppins(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
@@ -688,13 +688,21 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: pages[safeIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: safeIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        items: items,
+      bottomNavigationBar: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BottomNavigationBar(
+              type: BottomNavigationBarType.fixed,
+              currentIndex: safeIndex,
+              onTap: (index) => setState(() => _currentIndex = index),
+              selectedItemColor: AppColors.primary,
+              unselectedItemColor: Colors.grey,
+              items: items,
+            ),
+            const Footer(),
+          ],
+        ),
       ),
     );
   }
@@ -894,6 +902,9 @@ class _WebHomeShellState extends State<WebHomeShell> {
       );
     }
 
+    final width = MediaQuery.of(context).size.width;
+    final isNarrow = width < 900;
+
     final List<Widget> pages = _isSeller
         ? [
             WebBrowsePage(key: _browseKey),
@@ -909,6 +920,49 @@ class _WebHomeShellState extends State<WebHomeShell> {
 
     final safeIndex = _currentIndex.clamp(0, pages.length - 1);
 
+    if (isNarrow) {
+      // Mobile-friendly web layout: bottom navigation + footer
+      final items = _isSeller
+          ? const [
+              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
+              BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'My Products'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            ]
+          : const [
+              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
+              BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            ];
+
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Mechanic Part LLC'),
+          backgroundColor: Colors.white,
+          elevation: 1,
+          foregroundColor: AppColors.neutralDark,
+        ),
+        body: pages[safeIndex],
+        bottomNavigationBar: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              BottomNavigationBar(
+                currentIndex: safeIndex,
+                onTap: (i) => setState(() => _currentIndex = i),
+                items: items,
+                selectedItemColor: AppColors.primary,
+                unselectedItemColor: Colors.grey,
+                showUnselectedLabels: true,
+              ),
+              const Footer(),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Wide web layout: left rail + footer
     final railDestinations = _isSeller
         ? [
             const NavigationRailDestination(icon: Icon(Icons.search), label: Text('Browse')),
@@ -967,7 +1021,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Mechanic Part',
+                      'Mechanic Part LLC',
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1038,6 +1092,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
                             padding: const EdgeInsets.only(right: 8),
                             child: OutlinedButton.icon(
                               onPressed: () {
+                                final user = Supabase.instance.client.auth.currentUser;
                                 if (user == null) {
                                   context.go('/auth');
                                 } else {
@@ -1050,6 +1105,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
                           ),
                         ElevatedButton.icon(
                           onPressed: () {
+                            final user = Supabase.instance.client.auth.currentUser;
                             if (user == null) {
                               context.go('/auth');
                             } else {
@@ -1057,7 +1113,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
                             }
                           },
                           icon: const Icon(Icons.person_outline),
-                          label: Text(user == null ? 'Sign In' : 'Profile'),
+                          label: Text(Supabase.instance.client.auth.currentUser == null ? 'Sign In' : 'Profile'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
@@ -1095,6 +1151,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
           ),
         ],
       ),
+      bottomNavigationBar: const Footer(),
     );
   }
 }
@@ -1452,7 +1509,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
   int _columnsForWidth(double w) {
     if (w >= 1280) return 4;
     if (w >= 992) return 3;
-    return 2;
+    if (w >= 640) return 2;
+    return 1;
   }
 
   @override
@@ -1609,7 +1667,6 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
             ),
 
           const SizedBox(height: 32),
-          if (kIsWeb) const Footer(),
         ],
       ),
     );

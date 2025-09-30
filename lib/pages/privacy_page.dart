@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import '../widgets/footer.dart';
 
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key});
@@ -7,28 +9,98 @@ class PrivacyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy Policy')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Privacy Policy', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 12),
-                Text(
-                  'Your privacy matters to us. We collect basic information (like name, email, and contact details) when you register or interact on our platform. '
-                  'This information is used only to provide services, improve your experience, and ensure secure transactions. We never sell your personal data to third parties.\n\n'
-                  'Payments are processed through secure, trusted third-party providers (e.g., Stripe). You may request deletion of your data at any time by contacting our support team. '
-                  'For more details, please read our full Privacy Policy (you can expand later with legal wording).',
-                  style: GoogleFonts.poppins(height: 1.6),
+      appBar: AppBar(
+        leading: const BackButton(),
+        title: const Text('Privacy Policy'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Hero
+            Container(
+              height: 200,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)],
                 ),
-              ],
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Image.asset('assets/images/logo.png', height: 72, fit: BoxFit.contain),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'We respect your privacy',
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
+
+            // Body
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _section('Information We Collect',
+                          'Basic account details like name, email, and contact info when you register or interact with our platform.'),
+                      _section('How We Use Your Data',
+                          'To provide services, improve your experience, and ensure secure transactions.'),
+                      _section('Data Sharing',
+                          'We do not sell your personal data. Payments are processed via secure third‑party providers (e.g., Stripe).'),
+                      _section('Your Choices',
+                          'You can request deletion of your account and data by contacting support. We will honor valid requests promptly.'),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => context.go('/home'),
+                            child: const Text('Back to Home'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () => context.go('/contact'),
+                            child: const Text('Contact Support'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Footer(),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _section(String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(body, style: GoogleFonts.poppins(height: 1.6, color: Colors.grey.shade800)),
+        ],
       ),
     );
   }

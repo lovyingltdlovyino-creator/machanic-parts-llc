@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
+import '../widgets/footer.dart';
 
 class TermsPage extends StatelessWidget {
   const TermsPage({super.key});
@@ -7,32 +9,106 @@ class TermsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Terms of Service')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Terms of Service', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 12),
-                Text(
-                  'By using our website, you agree to the following:\n\n'
-                  '• Eligibility: You must be 18 years or older to use our marketplace.\n'
-                  '• User Accounts: You are responsible for keeping your account secure.\n'
-                  '• Listings & Transactions: Sellers must provide accurate information. Buyers should review listings before purchase.\n'
-                  '• Prohibited Use: Fraudulent activity, fake listings, and abuse of the platform are not allowed.\n'
-                  '• Liability: Mechanic Part LLC provides the platform but does not guarantee the condition or quality of third-party listed products.\n'
-                  '• Disputes: Issues between buyers and sellers should be resolved directly, though we may step in to assist when needed.\n'
-                  '• Changes: We may update these Terms as needed, and continued use of the platform means you accept them.',
-                  style: GoogleFonts.poppins(height: 1.6),
+      appBar: AppBar(
+        leading: const BackButton(),
+        title: const Text('Terms of Service'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Hero
+            Container(
+              height: 200,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFFFF9966), Color(0xFFFF5E62)],
                 ),
-              ],
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Image.asset('assets/images/logo.png', height: 72, fit: BoxFit.contain),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Simple terms for a safe marketplace',
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Body
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 900),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _bullet('Eligibility', 'You must be 18+ to use the marketplace.'),
+                      _bullet('Accounts & Security', 'Keep your login details secure and up to date.'),
+                      _bullet('Listings & Transactions', 'Sellers must provide accurate information. Buyers should review listings before purchase.'),
+                      _bullet('Prohibited Use', 'No fraud, fake listings, or abuse of the platform.'),
+                      _bullet('Liability', 'Mechanic Part LLC provides the platform but does not guarantee third‑party product quality.'),
+                      _bullet('Disputes', 'Buyers and sellers should resolve issues directly; we may assist when needed.'),
+                      _bullet('Changes', 'We may update these Terms; continued use means you accept them.'),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: () => context.go('/home'),
+                            child: const Text('Back to Home'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton(
+                            onPressed: () => context.go('/contact'),
+                            child: const Text('Contact Support'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Footer(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bullet(String title, String body) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontSize: 18)),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.poppins(color: Colors.black87, height: 1.5),
+                children: [
+                  TextSpan(text: '$title: ', style: const TextStyle(fontWeight: FontWeight.w700)),
+                  TextSpan(text: body),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
