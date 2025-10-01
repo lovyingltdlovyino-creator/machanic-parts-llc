@@ -196,12 +196,12 @@ Future<void> main() async {
     } catch (e) {
       // ignore: avoid_print
       print('runApp sync error: $e');
-      runApp(ErrorScreen(error: 'runApp error: $e'));
+      // Do not replace the app; keep running.
     }
   }, (error, stack) {
     // ignore: avoid_print
     print('Uncaught zone error: $error');
-    runApp(ErrorScreen(error: error.toString()));
+    // Keep the app running to avoid full-screen crash on transient errors.
   });
 }
 
@@ -3096,10 +3096,10 @@ class _ListingFormState extends State<ListingForm> {
                 ),
                 hint: const Text('Select Model'),
                 items: _selectedMake != null
-                    ? _carMakes[_selectedMake!]!.map((model) {
-                        return DropdownMenuItem(value: model, child: Text(model));
-                      }).toList()
-                    : [],
+                    ? ((_carMakes[_selectedMake!] ?? const <String>[]) as List<String>)
+                        .map((model) => DropdownMenuItem(value: model, child: Text(model)))
+                        .toList()
+                    : const [],
                 onChanged: _selectedMake != null
                     ? (value) {
                         setState(() {
