@@ -56,15 +56,15 @@ Future<void> main() async {
 
   // Capture all uncaught Flutter and zone errors, show a friendly screen on web
   FlutterError.onError = (FlutterErrorDetails details) {
+    // Present the error to the console but do NOT replace the whole app.
+    // This avoids full-screen error screens on minor widget errors (e.g., transient nulls).
     FlutterError.presentError(details);
-    // On web, also render an error screen instead of a blank page
-    runApp(ErrorScreen(error: details.exceptionAsString()));
   };
   // Also capture errors that escape FlutterError and zones (helps on web release)
   ui.PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
     // ignore: avoid_print
     print('[GlobalError] $error');
-    runApp(ErrorScreen(error: error.toString()));
+    // Keep the app running; let local widgets handle their own errors.
     return true;
   };
   // Replace red error boxes with a readable widget if a build fails
@@ -2825,7 +2825,17 @@ class _ListingFormState extends State<ListingForm> {
     });
 
     try {
-      final user = Supabase.instance.client.auth.currentUser!;
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        if (mounted) {
+          _loading = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please sign in to create a listing')),
+          );
+          context.go('/auth');
+        }
+        return;
+      }
       
       // Create listing data matching the actual database schema
       final listingData = <String, dynamic>{
@@ -7933,10 +7943,16 @@ class _MyProductsPageState extends State<MyProductsPage> {
 
   Future<void> _updateStatus(Map<String, dynamic> listing, String status) async {
     try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        if (mounted) context.go('/auth');
+        return;
+      }
       await Supabase.instance.client
           .from('listings')
           .update({'status': status})
-          .eq('id', listing['id']);
+          .eq('id', listing['id'])
+          .eq('owner_id', user.id);
       await _loadMyListings();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -8269,6 +8285,14 @@ class _EditListingPageState extends State<EditListingPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        if (mounted) {
+          setState(() => _saving = false);
+          context.go('/auth');
+        }
+        return;
+      }
       await Supabase.instance.client
           .from('listings')
           .update({
@@ -8278,7 +8302,8 @@ class _EditListingPageState extends State<EditListingPage> {
             'status': _status,
             'updated_at': DateTime.now().toIso8601String(),
           })
-          .eq('id', widget.listing['id']);
+          .eq('id', widget.listing['id'])
+          .eq('owner_id', user.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Listing updated')),
