@@ -2817,7 +2817,7 @@ class _ListingFormState extends State<ListingForm> {
   }
 
   Future<void> _submitListing() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     
     setState(() {
       _loading = true;
@@ -2892,7 +2892,7 @@ class _ListingFormState extends State<ListingForm> {
         );
         
         // Clear form
-        _formKey.currentState!.reset();
+        _formKey.currentState?.reset();
         _titleController.clear();
         _descriptionController.clear();
         _priceController.clear();
@@ -4753,7 +4753,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _isLoading = true);
 
@@ -7461,7 +7461,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _authenticate() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     
     setState(() {
       _loading = true;
@@ -7948,11 +7948,37 @@ class _MyProductsPageState extends State<MyProductsPage> {
         if (mounted) context.go('/auth');
         return;
       }
-      await Supabase.instance.client
-          .from('listings')
-          .update({'status': status})
-          .eq('id', listing['id'])
-          .eq('owner_id', user.id);
+      // Validate allowed statuses
+      const allowed = {'active', 'draft', 'sold'};
+      if (!allowed.contains(status)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Invalid status: $status')),
+          );
+        }
+        return;
+      }
+
+      final client = Supabase.instance.client;
+      // Try RPC first (security definer preferred); fallback to direct update if RPC is missing
+      try {
+        await client.rpc('update_listing_status', params: {
+          '_id': listing['id'],
+          '_status': status,
+        });
+      } catch (e) {
+        final msg = e.toString();
+        final fnMissing = msg.contains('42883') || msg.contains('function update_listing_status');
+        if (fnMissing) {
+          await client
+              .from('listings')
+              .update({'status': status})
+              .eq('id', listing['id'])
+              .eq('owner_id', user.id);
+        } else {
+          rethrow;
+        }
+      }
       await _loadMyListings();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -8282,7 +8308,7 @@ class _EditListingPageState extends State<EditListingPage> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
     try {
       final user = Supabase.instance.client.auth.currentUser;
