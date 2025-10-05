@@ -10,7 +10,7 @@ class PrivacyPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: const BackButton(),
+        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go('/home')),
         title: const Text('Privacy Policy'),
       ),
       body: SingleChildScrollView(
@@ -30,17 +30,21 @@ class PrivacyPage extends StatelessWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Wrap(
+                    spacing: 12,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    alignment: WrapAlignment.center,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Image.asset('assets/images/logo.png', height: 72, fit: BoxFit.contain),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                        child: Image.asset('assets/images/logo.png', height: 48, fit: BoxFit.contain),
                       ),
-                      const SizedBox(width: 12),
                       Text(
                         'We respect your privacy',
-                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                        style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

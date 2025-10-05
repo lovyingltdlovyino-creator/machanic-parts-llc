@@ -16,11 +16,11 @@ flutter precache --web
 flutter pub get
 
 echo "=== Building Flutter Web (release) ==="
-: "${SUPABASE_URL:?Missing SUPABASE_URL env var}"
-: "${SUPABASE_ANON_KEY:?Missing SUPABASE_ANON_KEY env var}"
+SUPABASE_URL="${SUPABASE_URL:-}"
+SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
 flutter build web --release \
-  --dart-define SUPABASE_URL="$SUPABASE_URL" \
-  --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+  --dart-define "SUPABASE_URL=$SUPABASE_URL" \
+  --dart-define "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
 echo "Build complete. Publish directory: build/web"

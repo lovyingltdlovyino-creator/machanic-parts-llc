@@ -12,8 +12,6 @@ import 'package:flutter/foundation.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
 import 'widgets/footer.dart';
-
-// Allow configuring Supabase via --dart-define with .env fallback
 import 'pages/billing_page.dart';
 import 'pages/admin_page.dart';
 import 'pages/paywall_page.dart';
@@ -21,9 +19,10 @@ import 'pages/about_page.dart';
 import 'pages/contact_page.dart';
 import 'pages/privacy_page.dart';
 import 'pages/terms_page.dart';
+import 'pages/reset_password_page.dart';
+
 const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
-
 // A simple error screen to show fatal errors instead of a blank page (used on web too)
 class ErrorScreen extends StatelessWidget {
   final String error;
@@ -87,13 +86,14 @@ Future<void> main() async {
     // ErrorScreen moved to top-level
   }
   
+  // Read from --dart-define first; fallback to .env only if dotenv is initialized
   final supabaseUrl = (kSupabaseUrlFromDefine.isNotEmpty
           ? kSupabaseUrlFromDefine
-          : dotenv.env['SUPABASE_URL'])
+          : (dotenv.isInitialized ? dotenv.env['SUPABASE_URL'] : null))
       ?.trim() ?? '';
   final supabaseAnonKey = (kSupabaseAnonFromDefine.isNotEmpty
           ? kSupabaseAnonFromDefine
-          : dotenv.env['SUPABASE_ANON_KEY'])
+          : (dotenv.isInitialized ? dotenv.env['SUPABASE_ANON_KEY'] : null))
       ?.trim() ?? '';
   // Minimal debug prints (no secrets)
   try {
@@ -139,6 +139,21 @@ Future<void> main() async {
     runApp(ErrorScreen(error: 'Supabase init failed: $e'));
     return;
   }
+  // Listen for password recovery deep links and navigate to reset page
+  try {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        // ignore: avoid_print
+        print('[Auth] Password recovery event detected');
+        try {
+          _router.go('/reset-password');
+        } catch (e) {
+          // ignore: avoid_print
+          print('[Auth] Navigation to /reset-password failed: $e');
+        }
+      }
+    });
+  } catch (_) {}
   
   // Initialize notification service
   // ignore: avoid_print
@@ -147,18 +162,15 @@ Future<void> main() async {
   // ignore: avoid_print
   print('[Init] NotificationService initialized');
 
-  // Initialize RevenueCat (iOS only)
+  // Initialize RevenueCat (strictly iOS only)
   // ignore: avoid_print
   print('[Init] Init RevenueCat');
   try {
-    if (kIsWeb) {
-      // ignore: avoid_print
-      print('[Init] RevenueCat skipped on web');
-    } else {
-      final rcKey = (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '').trim();
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      final rcKey = (dotenv.isInitialized ? (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '') : '').trim();
       await RevenueCatService.instance.initialize(rcKey);
       // ignore: avoid_print
-      print('[Init] RevenueCat initialized');
+      print('[Init] RevenueCat initialized (iOS)');
 
       final currentUser = Supabase.instance.client.auth.currentUser;
       // ignore: avoid_print
@@ -178,6 +190,9 @@ Future<void> main() async {
           await RevenueCatService.instance.logout();
         }
       });
+    } else {
+      // ignore: avoid_print
+      print('[Init] RevenueCat skipped (not iOS or web)');
     }
 
     // ignore: avoid_print
@@ -260,6 +275,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/auth',
       builder: (context, state) => const AuthPage(),
+    ),
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) => const ResetPasswordPage(),
     ),
     GoRoute(
       path: '/complete-profile',
@@ -399,41 +418,33 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.primary,
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.build_circle,
-                size: 80,
-                color: AppColors.primary,
-              ),
-            ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
-            const SizedBox(height: 24),
+            Image.asset(
+              'assets/images/logo.png',
+              height: 96,
+              fit: BoxFit.contain,
+            ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), curve: Curves.easeOut),
+            const SizedBox(height: 16),
             Text(
               'Mechanic Part LLC',
               style: GoogleFonts.poppins(
-                fontSize: 32,
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: AppColors.neutralDark,
               ),
-            ).animate().fadeIn(delay: 300.ms, duration: 600.ms),
-            const SizedBox(height: 8),
+            ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
+            const SizedBox(height: 6),
             Text(
               'Find the parts you need',
               style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: Colors.white70,
+                fontSize: 14,
+                color: Colors.black54,
               ),
-            ).animate().fadeIn(delay: 600.ms, duration: 600.ms),
+            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
           ],
         ),
       ),
@@ -2048,20 +2059,22 @@ class _BrowsePageState extends State<BrowsePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              'Hello! Guest',
+                              'Find Quality Auto Parts Faster',
                               style: GoogleFonts.poppins(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Find Your Perfect Part',
+                              'Browse thousands of listings from verified sellers across the country.',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 14,
                                 color: Colors.white.withOpacity(0.9),
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
@@ -4862,6 +4875,63 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _helpAndLegalSection(BuildContext context, Map<String, dynamic> p) {
+    final userType = ((p['user_type'] ?? Supabase.instance.client.auth.currentUser?.userMetadata?['user_type']) ?? 'buyer').toString();
+    final isSeller = userType == 'seller';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Help & Legal', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.info_outline),
+            title: const Text('About Us'),
+            onTap: () => context.push('/about'),
+          ),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.support_agent_outlined),
+            title: const Text('Contact Us'),
+            onTap: () => context.push('/contact'),
+          ),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            onTap: () => context.push('/privacy'),
+          ),
+          ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of Service'),
+            onTap: () => context.push('/terms'),
+          ),
+          if (!isSeller) ...[
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: () => context.go('/auth'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              child: const Text('Become a Seller'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildProfileSummary() {
     final p = _profile ?? {};
     final location = ((p['city'] ?? '') as String) + (((p['state'] ?? '') as String).isNotEmpty ? ', ${p['state']}' : '');
@@ -5000,6 +5070,8 @@ class _ProfilePageState extends State<ProfilePage> {
             _infoTile(Icons.calendar_month, 'Years in Business', (p['years_in_business'] ?? '').toString()),
             _infoTile(Icons.list_alt, 'Specialties', (p['specialties'] ?? '').toString()),
             _infoTile(Icons.description, 'Description', (p['business_description'] ?? '').toString()),
+            const SizedBox(height: 16),
+            _helpAndLegalSection(context, p),
           ],
         ),
       ),
@@ -7545,6 +7617,60 @@ class _AuthPageState extends State<AuthPage> {
       });
     }
   }
+ 
+  Future<void> _forgotPassword() async {
+    String email = _emailController.text.trim();
+    final emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+      final ctrl = TextEditingController(text: email);
+      final entered = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset password'),
+          content: TextField(
+            controller: ctrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              hintText: 'your@email.com',
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()), child: const Text('Send')),
+          ],
+        ),
+      );
+      email = (entered ?? '').trim();
+    }
+    if (email.isEmpty || !emailRegex.hasMatch(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid email to reset your password.')),
+      );
+      return;
+    }
+    try {
+      setState(() => _loading = true);
+      final redirect = kIsWeb ? Uri.base.origin : null;
+      await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: redirect);
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Check your email'),
+          content: Text("If an account exists for $email, we've sent a password reset link."),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send reset email: ${e.toString().replaceAll('Exception: ', '')}')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -7578,7 +7704,7 @@ class _AuthPageState extends State<AuthPage> {
                   size: 50,
                   color: Colors.white,
                 ),
-              ).animate().scale(duration: 600.ms, curve: Curves.elasticOut),
+              ).animate().scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), duration: 600.ms, curve: Curves.elasticOut),
               
               const SizedBox(height: 24),
               
@@ -7716,8 +7842,17 @@ class _AuthPageState extends State<AuthPage> {
                   return null;
                 },
               ),
-              
-              // Confirm password field (only for sign up)
+              if (!_isSignUp) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _loading ? null : _forgotPassword,
+                    child: const Text('Forgot password?'),
+                  ),
+                ),
+              ],
+
               if (_isSignUp) ...[
                 const SizedBox(height: 16),
                 TextFormField(
@@ -7969,7 +8104,9 @@ class _MyProductsPageState extends State<MyProductsPage> {
       } catch (e) {
         final msg = e.toString();
         final fnMissing = msg.contains('42883') || msg.contains('function update_listing_status');
-        if (fnMissing) {
+        // 42804: datatype mismatch (e.g., enum column vs text param)
+        final enumTypeMismatch = msg.contains('42804') || msg.contains('is of type') && msg.contains('but expression is of type');
+        if (fnMissing || enumTypeMismatch) {
           await client
               .from('listings')
               .update({'status': status})

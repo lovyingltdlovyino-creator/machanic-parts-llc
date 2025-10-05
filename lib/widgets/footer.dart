@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +8,12 @@ class Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hide footer on mobile-like experiences to keep UI clean
+    final width = MediaQuery.of(context).size.width;
+    final isMobilePlatform = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+    if (isMobilePlatform && width < 700) {
+      return const SizedBox.shrink();
+    }
     final year = DateTime.now().year;
     return Material(
       color: Colors.white,
@@ -28,12 +35,12 @@ class Footer extends StatelessWidget {
                       spacing: 12,
                       runSpacing: 8,
                       children: [
-                        TextButton(onPressed: () => context.go('/about'), child: const Text('About Us')),
-                        TextButton(onPressed: () => context.go('/contact'), child: const Text('Contact Us')),
-                        TextButton(onPressed: () => context.go('/privacy'), child: const Text('Privacy Policy')),
-                        TextButton(onPressed: () => context.go('/terms'), child: const Text('Terms of Service')),
+                        TextButton(onPressed: () => context.push('/about'), child: const Text('About Us')),
+                        TextButton(onPressed: () => context.push('/contact'), child: const Text('Contact Us')),
+                        TextButton(onPressed: () => context.push('/privacy'), child: const Text('Privacy Policy')),
+                        TextButton(onPressed: () => context.push('/terms'), child: const Text('Terms of Service')),
                         ElevatedButton(
-                          onPressed: () => context.go('/auth'),
+                          onPressed: () => context.push('/auth'),
                           child: const Text('Become a Seller'),
                         ),
                       ],

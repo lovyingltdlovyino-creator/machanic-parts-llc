@@ -47,8 +47,17 @@ class RevenueCatService {
   Future<CustomerInfo?> purchasePackage(Package pkg) async {
     if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
     try {
-      final info = await Purchases.purchasePackage(pkg);
-      return info;
+      // Use dynamic to support multiple SDK shapes
+      final dynamic result = await Purchases.purchasePackage(pkg);
+      // Newer SDKs return PurchaseResult with .customerInfo
+      try {
+        final CustomerInfo info = result.customerInfo as CustomerInfo;
+        return info;
+      } catch (_) {
+        // Older SDKs returned CustomerInfo directly
+        if (result is CustomerInfo) return result as CustomerInfo;
+        return null;
+      }
     } catch (_) {
       return null;
     }
