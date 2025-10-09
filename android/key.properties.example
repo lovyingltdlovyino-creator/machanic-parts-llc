@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties and fill in your secrets.
+# DO NOT COMMIT the real key.properties.
+# The path below is relative to the project root.
+storeFile=android/app/upload-keystore.jks
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=upload
+keyPassword=YOUR_STORE_PASSWORD

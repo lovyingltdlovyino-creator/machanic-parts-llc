@@ -17,6 +17,32 @@ class _PaywallPageState extends State<PaywallPage> {
   String? _error;
   CustomerInfo? _customerInfo;
 
+  // Maps productId prefixes to human-readable tier names
+  String _tierForProductId(String id) {
+    final lower = id.toLowerCase();
+    if (lower.startsWith('basic')) return 'Basic';
+    if (lower.startsWith('premium')) return 'Premium';
+    if (lower.startsWith('vipgold')) return 'VIP Gold';
+    if (lower.startsWith('vip')) return 'VIP';
+    return 'Other';
+  }
+
+  // Entitlement id per tier based on your dashboard screenshot
+  String? _entitlementForTier(String tier) {
+    switch (tier) {
+      case 'Basic':
+        return 'basic_access';
+      case 'Premium':
+        return 'premium_access';
+      case 'VIP':
+        return 'vip_access';
+      case 'VIP Gold':
+        return 'vipgold_access';
+      default:
+        return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -97,26 +123,84 @@ class _PaywallPageState extends State<PaywallPage> {
                     ),
                   const Text('Choose a plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
-                  if (_offerings?.current == null || (_offerings?.current?.availablePackages.isEmpty ?? true))
-                    const Text('No packages available yet.')
-                  else
-                    ..._offerings!.current!.availablePackages.map((pkg) {
-                      final product = pkg.storeProduct;
-                      final title = product.title;
-                      final price = product.priceString;
-                      final id = pkg.identifier; // rc package id (e.g., monthly, annual)
-                      final isActive = activeEntitlements.isNotEmpty; // any entitlement active
-                      return Card(
-                        child: ListTile(
-                          title: Text(title),
-                          subtitle: Text('$id  •  $price'),
-                          trailing: ElevatedButton(
-                            onPressed: isActive ? null : () => _purchase(pkg),
-                            child: Text(isActive ? 'Active' : 'Buy'),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  if (_offerings?.current == null || (_offerings?.current?.availablePackages.isEmpty ?? true)) ...[
+                    const Text('No packages available yet.'),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tip: In RevenueCat, set a Current offering and add Packages pointing to your iOS products.',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ] else ...[
+                    // Group packages by productId prefix (basic/premium/vip/vipgold)
+                    ...(() {
+                      final Map<String, List<Package>> groups = {};
+                      for (final pkg in _offerings!.current!.availablePackages) {
+                        final dynamic p = pkg.storeProduct;
+                        final String pid = (p.identifier ?? p.productIdentifier ?? '').toString();
+                        final tier = _tierForProductId(pid);
+                        (groups[tier] ??= <Package>[]).add(pkg);
+                      }
+                      // Preferred tier order
+                      const order = ['Basic', 'Premium', 'VIP', 'VIP Gold', 'Other'];
+                      final sortedTiers = groups.keys.toList()
+                        ..sort((a, b) => order.indexOf(a).compareTo(order.indexOf(b)));
+
+                      // Helper to sort plans by duration keyword
+                      int _rank(String s) {
+                        final l = s.toLowerCase();
+                        if (l.contains('month') && l.contains('6')) return 30;
+                        if (l.contains('quarter')) return 20;
+                        if (l.contains('month')) return 10; // monthly
+                        if (l.contains('year')) return 40;   // yearly
+                        return 99;
+                      }
+
+                      final widgets = <Widget>[];
+                      for (final tier in sortedTiers) {
+                        final ent = _entitlementForTier(tier);
+                        final hasActive = ent != null && activeEntitlements.contains(ent);
+
+                        widgets.add(Row(
+                          children: [
+                            Text(tier, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                            if (hasActive) ...[
+                              const SizedBox(width: 8),
+                              Chip(label: const Text('Active'), backgroundColor: Colors.green.shade100),
+                            ],
+                          ],
+                        ));
+                        widgets.add(const SizedBox(height: 8));
+
+                        final pkgs = groups[tier]!..sort((a, b) {
+                          final dynamic pa = a.storeProduct;
+                          final dynamic pb = b.storeProduct;
+                          final String ida = (pa.identifier ?? pa.productIdentifier ?? '').toString();
+                          final String idb = (pb.identifier ?? pb.productIdentifier ?? '').toString();
+                          return _rank(ida).compareTo(_rank(idb));
+                        });
+
+                        widgets.addAll(pkgs.map((pkg) {
+                          final dynamic product = pkg.storeProduct;
+                          final String title = (product.title ?? '').toString();
+                          final String price = (product.priceString ?? '').toString();
+                          final String pid = (product.identifier ?? product.productIdentifier ?? '').toString();
+                          return Card(
+                            child: ListTile(
+                              title: Text(title.isNotEmpty ? title : pid),
+                              subtitle: Text('$pid  •  $price'),
+                              trailing: ElevatedButton(
+                                onPressed: hasActive ? null : () => _purchase(pkg),
+                                child: Text(hasActive ? 'Active' : 'Buy'),
+                              ),
+                            ),
+                          );
+                        }));
+
+                        widgets.add(const SizedBox(height: 16));
+                      }
+                      return widgets;
+                    }()),
+                  ],
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: _restore,

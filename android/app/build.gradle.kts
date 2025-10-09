@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -9,6 +11,13 @@ android {
   namespace = "com.mechanicpart.mechanic_part"
   compileSdk = flutter.compileSdkVersion
   ndkVersion = "27.0.12077973"
+
+  // Load signing properties if present
+  val keystorePropertiesFile = rootProject.file("key.properties")
+  val keystoreProperties = Properties()
+  if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+  }
 
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11
@@ -33,11 +42,47 @@ android {
     versionName = flutter.versionName
   }
 
+  signingConfigs {
+    create("release") {
+      val storeFileProp = keystoreProperties.getProperty("storeFile")
+      if (!storeFileProp.isNullOrBlank()) {
+        val normalized = storeFileProp
+          .removePrefix("android/app/")
+          .removePrefix("android/")
+          .removePrefix("app/")
+
+        val candidates = listOf(
+          file(storeFileProp),
+          file(normalized),
+          rootProject.file(storeFileProp),
+          rootProject.file(normalized),
+          rootProject.file("app/$normalized")
+        ).distinct()
+
+        val found = candidates.firstOrNull { it.exists() }
+        if (found != null) {
+          storeFile = found
+        }
+      }
+      storePassword = keystoreProperties.getProperty("storePassword")
+      keyAlias = keystoreProperties.getProperty("keyAlias")
+      keyPassword = keystoreProperties.getProperty("keyPassword")
+    }
+  }
+
   buildTypes {
     release {
-      // TODO: Add your own signing config for the release build.
-      // Signing with the debug keys for now, so `flutter run --release` works.
-      signingConfig = signingConfigs.getByName("debug")
+      // Use release signing if configured, otherwise fall back to debug for local builds
+      val releaseConfig = signingConfigs.findByName("release")
+      signingConfig = if (releaseConfig?.storeFile != null && releaseConfig.storeFile!!.exists()) {
+        releaseConfig
+      } else {
+        signingConfigs.getByName("debug")
+      }
+      // Enable R8 if you want (keep false until you add proper rules)
+      isMinifyEnabled = false
+      // Resource shrinking requires code shrinking; keep disabled while minify is false
+      isShrinkResources = false
     }
   }
 }

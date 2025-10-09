@@ -20,6 +20,7 @@ import 'pages/contact_page.dart';
 import 'pages/privacy_page.dart';
 import 'pages/terms_page.dart';
 import 'pages/reset_password_page.dart';
+import 'pages/categories_page.dart';
 
 const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
@@ -293,6 +294,10 @@ final _router = GoRouter(
       builder: (context, state) => const PaywallPage(),
     ),
     GoRoute(
+      path: '/categories',
+      builder: (context, state) => const CategoriesPage(),
+    ),
+    GoRoute(
       path: '/admin',
       builder: (context, state) => const AdminPage(),
     ),
@@ -418,34 +423,131 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 96,
-              fit: BoxFit.contain,
-            ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), curve: Curves.easeOut),
-            const SizedBox(height: 16),
-            Text(
-              'Mechanic Part LLC',
-              style: GoogleFonts.poppins(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: AppColors.neutralDark,
-              ),
-            ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
-            const SizedBox(height: 6),
-            Text(
-              'Find the parts you need',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.black54,
-              ),
-            ).animate().fadeIn(delay: 400.ms, duration: 400.ms),
-          ],
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E3A8A), // Deep blue
+              Color(0xFF3B82F6), // Medium blue
+              Color(0xFF60A5FA), // Light blue
+              Color(0xFF93C5FD), // Very light blue
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo container with subtle shadow and glow effect
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.2),
+                        blurRadius: 20,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo_new.png',
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      // Fallback to old logo if new one doesn't exist yet
+                      return Image.asset(
+                        'assets/images/logo.png',
+                        height: 120,
+                        fit: BoxFit.contain,
+                      );
+                    },
+                  ),
+                ).animate().fadeIn(duration: 800.ms).scale(
+                  begin: const Offset(0.8, 0.8), 
+                  end: const Offset(1.0, 1.0), 
+                  curve: Curves.elasticOut,
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // App title with elegant styling
+                Text(
+                  'MECHANIC PART LLC',
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 1.2,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.3),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(
+                  begin: 0.3, 
+                  end: 0, 
+                  curve: Curves.easeOut,
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Subtitle with refined styling
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Text(
+                    'Find the parts you need',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white.withOpacity(0.9),
+                      letterSpacing: 0.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ).animate().fadeIn(delay: 600.ms, duration: 600.ms).slideY(
+                  begin: 0.2, 
+                  end: 0, 
+                  curve: Curves.easeOut,
+                ),
+                
+                const SizedBox(height: 40),
+                
+                // Loading indicator with custom styling
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 1000.ms, duration: 400.ms),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1355,6 +1457,9 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         }
 
         // Apply category/condition filters client-side (RPC may not support directly)
+        if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
+          results = results.where((e) => (e['type'] ?? '').toString().toLowerCase() == filters['type'].toString().toLowerCase()).toList();
+        }
         if (filters['category'] != null && filters['category'].toString().isNotEmpty && filters['category'] != 'all') {
           results = results.where((e) => (e['category'] ?? '').toString().toLowerCase() == filters['category'].toString().toLowerCase()).toList();
         }
@@ -1400,6 +1505,10 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         var ranked = supabase
             .from('listings_ranked')
             .select('id');
+
+        if (filters['type'] != null && filters['type'] != 'all') {
+          ranked = ranked.eq('type', filters['type']);
+        }
 
         if (filters['category'] != null && filters['category'] != 'all') {
           ranked = ranked.eq('category', filters['category']);
@@ -1853,7 +1962,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
     try {
       dynamic response;
-      
+
       if (filters.containsKey('zip') && filters['zip'] != null && filters['zip'].toString().isNotEmpty) {
         // Location-based search using RPC
         response = await Supabase.instance.client.rpc('search_listings_by_zip', params: {
@@ -1861,7 +1970,7 @@ class _BrowsePageState extends State<BrowsePage> {
           'radius_miles': filters['radius'] ?? 25,
         });
       } else {
-        // General search using direct query
+        // General search using direct query (include nested photos)
         var query = Supabase.instance.client
             .from('listings')
             .select('''
@@ -1869,118 +1978,139 @@ class _BrowsePageState extends State<BrowsePage> {
               listing_photos(storage_path, sort_order)
             ''')
             .eq('status', 'active');
-        
+
         // Apply filters
-        if (filters['part_name'] != null) {
+        if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
           query = query.or('title.ilike.%${filters['part_name']}%,description.ilike.%${filters['part_name']}%');
         }
-        if (filters['category'] != null) {
+        if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
+          query = query.eq('type', filters['type']);
+        }
+        if (filters['category'] != null && filters['category'].toString().isNotEmpty) {
           query = query.eq('category', filters['category']);
         }
-        if (filters['condition'] != null) {
+        if (filters['condition'] != null && filters['condition'].toString().isNotEmpty && filters['condition'] != 'all') {
           query = query.eq('condition', filters['condition']);
         }
-        if (filters['make'] != null) {
+        if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
           query = query.ilike('make', '%${filters['make']}%');
         }
-        if (filters['model'] != null) {
+        if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
           query = query.ilike('model', '%${filters['model']}%');
         }
         if (filters['year'] != null) {
           query = query.eq('year', filters['year']);
         }
-        
-        response = await query.order('created_at', ascending: false);
-      }
-      
-      // If using RPC (ZIP search), attach photos and apply client-side filters
-      if (filters.containsKey('zip') && filters['zip'] != null && filters['zip'].toString().isNotEmpty) {
-        var results = List<Map<String, dynamic>>.from(response ?? []);
 
-        // Normalize distance field
-        for (final item in results) {
-          if (item['distance'] == null && item['distance_miles'] != null) {
-            final d = item['distance_miles'];
-            if (d is num) item['distance'] = d.toDouble();
-          }
-        }
+        final resultsResp = await query.order('created_at', ascending: false);
+        final results = List<Map<String, dynamic>>.from(resultsResp ?? []);
 
-        // Apply optional filters client-side
-        if (filters['category'] != null &&
-            filters['category'].toString().isNotEmpty &&
-            filters['category'] != 'all') {
-          results = results
-              .where((e) => (e['category'] ?? '').toString().toLowerCase() ==
-                  filters['category'].toString().toLowerCase())
-              .toList();
-        }
-        if (filters['condition'] != null &&
-            filters['condition'].toString().isNotEmpty &&
-            filters['condition'] != 'all') {
-          results = results
-              .where((e) => (e['condition'] ?? '').toString().toLowerCase() ==
-                  filters['condition'].toString().toLowerCase())
-              .toList();
-        }
-        if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
-          final q = filters['part_name'].toString().toLowerCase();
-          results = results.where((e) {
-            final t = (e['title'] ?? '').toString().toLowerCase();
-            final d = (e['description'] ?? '').toString().toLowerCase();
-            return t.contains(q) || d.contains(q);
-          }).toList();
-        }
-        if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
-          final q = filters['make'].toString().toLowerCase();
-          results = results.where((e) => (e['make'] ?? '').toString().toLowerCase().contains(q)).toList();
-        }
-        if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
-          final q = filters['model'].toString().toLowerCase();
-          results = results.where((e) => (e['model'] ?? '').toString().toLowerCase().contains(q)).toList();
-        }
-        if (filters['year'] != null) {
-          results = results.where((e) => e['year'] == filters['year']).toList();
-        }
-
-        // Attach listing_photos
-        final ids = results.map((e) => e['id']).where((id) => id != null).toList();
-        if (ids.isNotEmpty) {
-          final photosResp = await Supabase.instance.client
-              .from('listing_photos')
-              .select('listing_id, storage_path, sort_order')
-              .inFilter('listing_id', ids)
-              .order('sort_order');
-          final photos = List<Map<String, dynamic>>.from(photosResp ?? []);
-          final Map<dynamic, List<Map<String, dynamic>>> byListing = {};
-          for (final p in photos) {
-            final lid = p['listing_id'];
-            byListing.putIfAbsent(lid, () => []);
-            byListing[lid]!.add({'storage_path': p['storage_path'], 'sort_order': p['sort_order']});
-          }
-          for (final item in results) {
-            item['listing_photos'] = byListing[item['id']] ?? [];
-          }
-        }
-
-        // Track impressions for search results
+        // Track impressions
         for (final it in results) {
           final id = it['id'];
           if (id != null) {
-            try { await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'}); } catch (_) {}
+            try {
+              await Supabase.instance.client
+                  .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+            } catch (_) {}
           }
         }
-        if (mounted) { setState(() { _listings = results; _loading = false; }); }
-      } else {
-        final loaded = List<Map<String, dynamic>>.from(response ?? []);
-        for (final it in loaded) {
-          final id = it['id'];
-          if (id != null) {
-            try { await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'}); } catch (_) {}
-          }
+
+        if (mounted) {
+          setState(() {
+            _listings = results;
+            _loading = false;
+          });
         }
-        if (mounted) { setState(() { _listings = loaded; _loading = false; }); }
+        return;
+      }
+
+      // ZIP path: apply client-side filters and attach photos
+      var loaded = List<Map<String, dynamic>>.from(response ?? []);
+
+      // Normalize distance if present
+      for (final item in loaded) {
+        if (item['distance'] == null && item['distance_miles'] != null) {
+          final d = item['distance_miles'];
+          if (d is num) item['distance'] = d.toDouble();
+        }
+      }
+
+      // Apply optional filters client-side
+      if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
+        loaded = loaded
+            .where((e) => (e['type'] ?? '').toString().toLowerCase() ==
+                filters['type'].toString().toLowerCase())
+            .toList();
+      }
+      if (filters['category'] != null && filters['category'].toString().isNotEmpty && filters['category'] != 'all') {
+        loaded = loaded
+            .where((e) => (e['category'] ?? '').toString().toLowerCase() ==
+                filters['category'].toString().toLowerCase())
+            .toList();
+      }
+      if (filters['condition'] != null && filters['condition'].toString().isNotEmpty && filters['condition'] != 'all') {
+        loaded = loaded
+            .where((e) => (e['condition'] ?? '').toString().toLowerCase() ==
+                filters['condition'].toString().toLowerCase())
+            .toList();
+      }
+      if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
+        final q = filters['part_name'].toString().toLowerCase();
+        loaded = loaded.where((e) {
+          final t = (e['title'] ?? '').toString().toLowerCase();
+          final d = (e['description'] ?? '').toString().toLowerCase();
+          return t.contains(q) || d.contains(q);
+        }).toList();
+      }
+      if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
+        final q = filters['make'].toString().toLowerCase();
+        loaded = loaded.where((e) => (e['make'] ?? '').toString().toLowerCase().contains(q)).toList();
+      }
+      if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
+        final q = filters['model'].toString().toLowerCase();
+        loaded = loaded.where((e) => (e['model'] ?? '').toString().toLowerCase().contains(q)).toList();
+      }
+      if (filters['year'] != null) {
+        loaded = loaded.where((e) => e['year'] == filters['year']).toList();
+      }
+
+      // Attach listing_photos for RPC results
+      final ids = loaded.map((e) => e['id']).where((id) => id != null).toList();
+      if (ids.isNotEmpty) {
+        final photosResp = await Supabase.instance.client
+            .from('listing_photos')
+            .select('listing_id, storage_path, sort_order')
+            .inFilter('listing_id', ids)
+            .order('sort_order');
+        final photos = List<Map<String, dynamic>>.from(photosResp ?? []);
+        final Map<dynamic, List<Map<String, dynamic>>> byListing = {};
+        for (final p in photos) {
+          final lid = p['listing_id'];
+          byListing.putIfAbsent(lid, () => []);
+          byListing[lid]!.add({'storage_path': p['storage_path'], 'sort_order': p['sort_order']});
+        }
+        for (final item in loaded) {
+          item['listing_photos'] = byListing[item['id']] ?? [];
+        }
+      }
+
+      // Track impressions for RPC results
+      for (final it in loaded) {
+        final id = it['id'];
+        if (id != null) {
+          try {
+            await Supabase.instance.client
+                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+          } catch (_) {}
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _listings = loaded;
+          _loading = false;
+        });
       }
     } catch (e) {
       setState(() {
@@ -1988,6 +2118,13 @@ class _BrowsePageState extends State<BrowsePage> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> filterByCategoryOrType({String? type, String? category}) async {
+    final filters = <String, dynamic>{};
+    if (type != null && type.isNotEmpty) filters['type'] = type;
+    if (category != null && category.isNotEmpty) filters['category'] = category;
+    await performAdvancedSearch(filters);
   }
 
   @override
@@ -2312,7 +2449,17 @@ class _BrowsePageState extends State<BrowsePage> {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () async {
+                  final selection = await context.push<String>('/categories');
+                  if (selection == null || selection.isEmpty) return;
+                  if (selection.startsWith('TYPE:')) {
+                    final type = selection.split(':').last;
+                    await filterByCategoryOrType(type: type);
+                  } else if (selection.startsWith('CAT:')) {
+                    final cat = selection.split(':').last;
+                    await filterByCategoryOrType(type: 'part', category: cat);
+                  }
+                },
                 child: Text(
                   'View More',
                   style: TextStyle(
@@ -2849,7 +2996,23 @@ class _ListingFormState extends State<ListingForm> {
         }
         return;
       }
-      
+      // On iOS, require any active subscription entitlement before creating a listing
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+        final hasSub = await RevenueCatService.instance.hasAnyEntitlement({
+          'basic_access', 'premium_access', 'vip_access', 'vipgold_access',
+        });
+        if (!hasSub) {
+          if (mounted) {
+            _loading = false;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('A subscription is required to create listings on iOS.')),
+            );
+            context.go('/paywall');
+          }
+          return;
+        }
+      }
+
       // Create listing data matching the actual database schema
       final listingData = <String, dynamic>{
         'owner_id': user.id,
@@ -2859,7 +3022,7 @@ class _ListingFormState extends State<ListingForm> {
         'price_usd': double.parse(_priceController.text.trim()),
         'condition': _condition,
       };
-      
+
       // Add category for parts
       if (_category == 'part') {
         listingData['category'] = _selectedPartCategory;

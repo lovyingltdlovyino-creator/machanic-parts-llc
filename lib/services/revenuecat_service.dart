@@ -7,6 +7,8 @@ class RevenueCatService {
   static final RevenueCatService instance = RevenueCatService._();
 
   bool _initialized = false;
+  CustomerInfo? _cachedCustomerInfo;
+  DateTime? _lastFetchAt;
 
   Future<void> initialize(String iosPublicSdkKey) async {
     if (kIsWeb) return; // not supported on web
@@ -79,5 +81,28 @@ class RevenueCatService {
     } catch (_) {
       return null;
     }
+  }
+
+  // Lightweight cache to avoid spamming the SDK
+  Future<CustomerInfo?> ensureCustomerInfo({bool forceRefresh = false}) async {
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    final now = DateTime.now();
+    if (!forceRefresh && _cachedCustomerInfo != null && _lastFetchAt != null) {
+      if (now.difference(_lastFetchAt!).inSeconds < 60) {
+        return _cachedCustomerInfo;
+      }
+    }
+    final info = await getCustomerInfo();
+    _cachedCustomerInfo = info;
+    _lastFetchAt = DateTime.now();
+    return info;
+  }
+
+  Future<bool> hasAnyEntitlement(Set<String> entitlementIds) async {
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return false;
+    final info = await ensureCustomerInfo();
+    if (info == null) return false;
+    final active = info.entitlements.active.keys.toSet();
+    return entitlementIds.any(active.contains);
   }
 }
