@@ -1,0 +1,117 @@
+workflows:
+  ios_app_store:
+    name: iOS App Store
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      # Create these groups in Codemagic UI and add the variables inside them
+      groups:
+        - supabase_env            # SUPABASE_URL, SUPABASE_ANON_KEY
+        - app_store_connect       # APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
+        # Optionally: ios_signing  # If you prefer manual signing (CERT, CERT_PASSWORD, PROVISIONING_PROFILE)
+      vars:
+        BUNDLE_ID: com.mechanicpart.mechanic_part
+        XCODE_WORKSPACE: ios/Runner.xcworkspace
+        XCODE_SCHEME: Runner
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter version
+        script: flutter --version
+      - name: Dependencies
+        script: flutter pub get
+      - name: Generate launcher icons (idempotent)
+        script: dart run flutter_launcher_icons
+      - name: Generate native splash (idempotent)
+        script: dart run flutter_native_splash:create
+      - name: Flutter build ios (no codesign)
+        script: |
+          flutter build ios --release --no-codesign \
+            --dart-define SUPABASE_URL=$SUPABASE_URL \
+            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+      - name: Add signing certificates to keychain (if provided)
+        script: |
+          if [ -n "${CM_CERTIFICATE:-}" ]; then
+            keychain add-certificates
+          else
+            echo "Skipping keychain add-certificates (no iOS cert env provided)."
+          fi
+      - name: Configure Xcode project with provisioning profiles (if provided)
+        script: |
+          if [ -n "${CM_PROVISIONING_PROFILE:-}" ]; then
+            xcode-project use-profiles
+          else
+            echo "Skipping xcode-project use-profiles (no provisioning profile provided)."
+          fi
+      - name: Build IPA (automatic signing allowed if configured in UI)
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags "-allowProvisioningUpdates"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - build/ios/archive/*.xcarchive
+    publishing:
+      app_store_connect:
+        # Provide these as secure env vars in group: app_store_connect
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        # Optionally control release to App Store after review
+        release_type: MANUAL
+        # Optional: set changelog from last commit
+        # changelog: "$CM_COMMIT_MESSAGE"
+
+  android_release:
+    name: Android Release (AAB+APK)
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      groups:
+        - supabase_env         # SUPABASE_URL, SUPABASE_ANON_KEY
+        # Optional: android_signing  # ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS (for Codemagic-managed signing)
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter version
+        script: flutter --version
+      - name: Dependencies
+        script: flutter pub get
+      - name: Generate launcher icons (idempotent)
+        script: dart run flutter_launcher_icons
+      - name: Generate native splash (idempotent)
+        script: dart run flutter_native_splash:create
+      - name: Build Android App Bundle (.aab)
+        script: |
+          flutter build appbundle --release \
+            --dart-define SUPABASE_URL=$SUPABASE_URL \
+            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+      - name: Build Android APK (optional)
+        script: |
+          flutter build apk --release \
+            --dart-define SUPABASE_URL=$SUPABASE_URL \
+            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/flutter-apk/*.apk
+    # Optional: automatic publish to Google Play if you add credentials
+    # publishing:
+    #   google_play:
+    #     credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS   # JSON content
+    #     track: internal
