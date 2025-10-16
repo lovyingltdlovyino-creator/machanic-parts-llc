@@ -24,6 +24,7 @@ import 'pages/categories_page.dart';
 
 const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+const String kRevenuecatIosKeyFromDefine = String.fromEnvironment('REVENUECAT_IOS_PUBLIC_SDK_KEY', defaultValue: '');
 // A simple error screen to show fatal errors instead of a blank page (used on web too)
 class ErrorScreen extends StatelessWidget {
   final String error;
@@ -168,10 +169,18 @@ Future<void> main() async {
   print('[Init] Init RevenueCat');
   try {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-      final rcKey = (dotenv.isInitialized ? (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '') : '').trim();
-      await RevenueCatService.instance.initialize(rcKey);
-      // ignore: avoid_print
-      print('[Init] RevenueCat initialized (iOS)');
+      final rcKey = (kRevenuecatIosKeyFromDefine.isNotEmpty
+              ? kRevenuecatIosKeyFromDefine
+              : (dotenv.isInitialized ? (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '') : ''))
+          .trim();
+      if (rcKey.isEmpty) {
+        // ignore: avoid_print
+        print('[Init] RevenueCat key missing; skipping initialization');
+      } else {
+        await RevenueCatService.instance.initialize(rcKey);
+        // ignore: avoid_print
+        print('[Init] RevenueCat initialized (iOS)');
+      }
 
       final currentUser = Supabase.instance.client.auth.currentUser;
       // ignore: avoid_print
