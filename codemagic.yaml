@@ -10,9 +10,10 @@ workflows:
       groups:
         - supabase_env            # SUPABASE_URL, SUPABASE_ANON_KEY
         - app_store_connect       # APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
+        - revenuecat_env          # REVENUECAT_IOS_PUBLIC_SDK_KEY
         # Optionally: ios_signing  # If you prefer manual signing (CERT, CERT_PASSWORD, PROVISIONING_PROFILE)
       vars:
-        BUNDLE_ID: com.mechanicpart.mechanic_part
+        BUNDLE_ID: com.mechanicpart.mechanicPart
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
     triggering:
@@ -28,6 +29,15 @@ workflows:
         script: flutter --version
       - name: Dependencies
         script: flutter pub get
+      - name: Create .env from CI variables
+        script: |
+          echo "Creating .env for Flutter asset bundling"
+          {
+            [ -n "${SUPABASE_URL:-}" ] && echo "SUPABASE_URL=${SUPABASE_URL}";
+            [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
+            [ -n "${REVENUECAT_IOS_PUBLIC_SDK_KEY:-}" ] && echo "REVENUECAT_IOS_PUBLIC_SDK_KEY=${REVENUECAT_IOS_PUBLIC_SDK_KEY}";
+          } > .env
+          echo ".env created"
       - name: Generate launcher icons (idempotent)
         script: dart run flutter_launcher_icons
       - name: Generate native splash (idempotent)
@@ -80,6 +90,7 @@ workflows:
       groups:
         - supabase_env         # SUPABASE_URL, SUPABASE_ANON_KEY
         # Optional: android_signing  # ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS (for Codemagic-managed signing)
+        # - revenuecat_env       # not used for Android
     triggering:
       events:
         - push
@@ -93,6 +104,14 @@ workflows:
         script: flutter --version
       - name: Dependencies
         script: flutter pub get
+      - name: Create .env from CI variables
+        script: |
+          echo "Creating .env for Flutter asset bundling"
+          {
+            [ -n "${SUPABASE_URL:-}" ] && echo "SUPABASE_URL=${SUPABASE_URL}";
+            [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
+          } > .env
+          echo ".env created"
       - name: Generate launcher icons (idempotent)
         script: dart run flutter_launcher_icons
       - name: Generate native splash (idempotent)
