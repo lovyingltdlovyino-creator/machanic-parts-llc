@@ -64,15 +64,13 @@ workflows:
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
-      - name: Configure Xcode project with provisioning profiles
-        script: |
-          xcode-project use-profiles
       - name: Build IPA with Xcode (automatic signing)
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags="-allowProvisioningUpdates"
+            --archive-flags="-allowProvisioningUpdates" \
+            --archive-xcargs "CODE_SIGN_STYLE=Automatic"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
