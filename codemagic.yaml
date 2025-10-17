@@ -66,10 +66,20 @@ workflows:
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
       - name: Build IPA with Xcode (automatic signing)
         script: |
+          # Avoid CLI error if Codemagic sets CM_EXPORT_OPTIONS but file doesn't exist
+          if [ -n "${CM_EXPORT_OPTIONS:-}" ] && [ ! -f "${CM_EXPORT_OPTIONS}" ]; then
+            echo "CM_EXPORT_OPTIONS set but file missing; unsetting"
+            unset CM_EXPORT_OPTIONS
+          fi
+          EXPORT_ARGS=""
+          if [ -n "${CM_EXPORT_OPTIONS:-}" ] && [ -f "${CM_EXPORT_OPTIONS}" ]; then
+            echo "Using export options plist at $CM_EXPORT_OPTIONS"
+            EXPORT_ARGS="--export-options-plist \"$CM_EXPORT_OPTIONS\""
+          fi
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags="-allowProvisioningUpdates"
+            --archive-flags="-allowProvisioningUpdates" $EXPORT_ARGS
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
