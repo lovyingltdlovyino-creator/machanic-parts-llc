@@ -42,12 +42,14 @@ workflows:
         script: dart run flutter_launcher_icons
       - name: Generate native splash (idempotent)
         script: dart run flutter_native_splash:create
-      - name: Flutter build ios (no codesign)
+      - name: Verify required env vars (Supabase)
         script: |
-          flutter build ios --release --no-codesign \
-            --dart-define SUPABASE_URL=$SUPABASE_URL \
-            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
-            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY=$REVENUECAT_IOS_PUBLIC_SDK_KEY
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Missing SUPABASE_URL or SUPABASE_ANON_KEY"
+            exit 1
+          fi
+          echo "SUPABASE_URL is set"
+          echo "SUPABASE_ANON_KEY is set"
       - name: Add signing certificates to keychain (if provided)
         script: |
           if [ -n "${CM_CERTIFICATE:-}" ]; then
@@ -55,19 +57,16 @@ workflows:
           else
             echo "Skipping keychain add-certificates (no iOS cert env provided)."
           fi
-      - name: Configure Xcode project with provisioning profiles (if provided)
+      - name: Configure Xcode project with provisioning profiles
         script: |
-          if [ -n "${CM_PROVISIONING_PROFILE:-}" ]; then
-            xcode-project use-profiles
-          else
-            echo "Skipping xcode-project use-profiles (no provisioning profile provided)."
-          fi
-      - name: Build IPA (automatic signing allowed if configured in UI)
+          xcode-project use-profiles
+      - name: Flutter build ipa (App Store)
         script: |
-          xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
-            --archive-flags "-allowProvisioningUpdates"
+          flutter build ipa --release \
+            --export-options-plist "$CM_EXPORT_OPTIONS" \
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
@@ -117,16 +116,24 @@ workflows:
         script: dart run flutter_launcher_icons
       - name: Generate native splash (idempotent)
         script: dart run flutter_native_splash:create
+      - name: Verify required env vars (Supabase)
+        script: |
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "Missing SUPABASE_URL or SUPABASE_ANON_KEY"
+            exit 1
+          fi
+          echo "SUPABASE_URL is set"
+          echo "SUPABASE_ANON_KEY is set"
       - name: Build Android App Bundle (.aab)
         script: |
           flutter build appbundle --release \
-            --dart-define SUPABASE_URL=$SUPABASE_URL \
-            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
       - name: Build Android APK (optional)
         script: |
           flutter build apk --release \
-            --dart-define SUPABASE_URL=$SUPABASE_URL \
-            --dart-define SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
     artifacts:
       - build/app/outputs/bundle/release/*.aab
       - build/app/outputs/flutter-apk/*.apk
