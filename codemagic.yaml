@@ -51,6 +51,14 @@ workflows:
           fi
           echo "SUPABASE_URL is set"
           echo "SUPABASE_ANON_KEY is set"
+      - name: Fetch signing files (App Store)
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create \
+            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
+            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
+            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY
       - name: Add signing certificates to keychain (if provided)
         script: |
           if [ -n "${CM_CERTIFICATE:-}" ]; then
