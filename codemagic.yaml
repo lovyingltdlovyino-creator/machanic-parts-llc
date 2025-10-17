@@ -11,6 +11,7 @@ workflows:
         - supabase_env            # SUPABASE_URL, SUPABASE_ANON_KEY
         - app_store_connect       # APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
         - revenuecat_env          # REVENUECAT_IOS_PUBLIC_SDK_KEY
+        - supabse                 # fallback if group was misspelled in UI
         # Optionally: ios_signing  # If you prefer manual signing (CERT, CERT_PASSWORD, PROVISIONING_PROFILE)
       vars:
         BUNDLE_ID: com.mechanicpart.mechanicPart
@@ -77,8 +78,6 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
-        # Optionally control release to App Store after review
-        release_type: MANUAL
         # Optional: set changelog from last commit
         # changelog: "$CM_COMMIT_MESSAGE"
 
