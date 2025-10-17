@@ -69,34 +69,10 @@ workflows:
           xcode-project use-profiles
       - name: Build IPA with Xcode (automatic signing)
         script: |
-          # Always ensure an export options plist exists at the expected path
-          PLIST_PATH="${CM_EXPORT_OPTIONS:-${EXPORT_OPTIONS_PLIST:-$HOME/export_options.plist}}"
-          mkdir -p "$(dirname "$PLIST_PATH")"
-          if [ ! -f "$PLIST_PATH" ]; then
-            echo "Writing export options plist to $PLIST_PATH"
-            cat > "$PLIST_PATH" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>method</key>
-  <string>app-store</string>
-  <key>signingStyle</key>
-  <string>automatic</string>
-  <key>uploadBitcode</key>
-  <false/>
-  <key>compileBitcode</key>
-  <false/>
-</dict>
-</plist>
-PLIST
-          fi
-          echo "Using export options plist at $PLIST_PATH"
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags="-allowProvisioningUpdates" \
-            --export-options-plist "$PLIST_PATH"
+            --archive-flags="-allowProvisioningUpdates"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
