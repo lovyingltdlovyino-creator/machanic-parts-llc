@@ -64,7 +64,6 @@ workflows:
       - name: Flutter build ipa (App Store)
         script: |
           flutter build ipa --release \
-            --export-options-plist "$CM_EXPORT_OPTIONS" \
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
