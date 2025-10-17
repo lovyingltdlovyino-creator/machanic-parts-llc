@@ -64,22 +64,39 @@ workflows:
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
+      - name: Configure Xcode project with provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: Build IPA with Xcode (automatic signing)
         script: |
-          # Avoid CLI error if Codemagic sets CM_EXPORT_OPTIONS but file doesn't exist
-          if [ -n "${CM_EXPORT_OPTIONS:-}" ] && [ ! -f "${CM_EXPORT_OPTIONS}" ]; then
-            echo "CM_EXPORT_OPTIONS set but file missing; unsetting"
-            unset CM_EXPORT_OPTIONS
+          # Always ensure an export options plist exists at the expected path
+          PLIST_PATH="${CM_EXPORT_OPTIONS:-${EXPORT_OPTIONS_PLIST:-$HOME/export_options.plist}}"
+          mkdir -p "$(dirname "$PLIST_PATH")"
+          if [ ! -f "$PLIST_PATH" ]; then
+            echo "Writing export options plist to $PLIST_PATH"
+            cat > "$PLIST_PATH" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store</string>
+  <key>signingStyle</key>
+  <string>automatic</string>
+  <key>uploadBitcode</key>
+  <false/>
+  <key>compileBitcode</key>
+  <false/>
+</dict>
+</plist>
+PLIST
           fi
-          EXPORT_ARGS=""
-          if [ -n "${CM_EXPORT_OPTIONS:-}" ] && [ -f "${CM_EXPORT_OPTIONS}" ]; then
-            echo "Using export options plist at $CM_EXPORT_OPTIONS"
-            EXPORT_ARGS="--export-options-plist \"$CM_EXPORT_OPTIONS\""
-          fi
+          echo "Using export options plist at $PLIST_PATH"
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags="-allowProvisioningUpdates" $EXPORT_ARGS
+            --archive-flags="-allowProvisioningUpdates" \
+            --export-options-plist "$PLIST_PATH"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
