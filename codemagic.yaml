@@ -64,6 +64,9 @@ workflows:
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
+      - name: Configure Xcode project with provisioning profiles
+        script: |
+          xcode-project use-profiles
       - name: Build IPA with Xcode (automatic signing)
         script: |
           # Strip injected export options envs and always provide our own file
@@ -86,12 +89,17 @@ workflows:
             '  <false/>' \
             '</dict>' \
             '</plist>' > "$FALLBACK_PLIST"
+          # Build XCARGS for automatic signing and correct bundle id
+          XCARGS="CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+          if [ -n "${APPLE_TEAM_ID:-}" ]; then
+            XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
+          fi
           env -u CM_EXPORT_OPTIONS -u EXPORT_OPTIONS_PLIST \
             xcode-project build-ipa \
               --workspace "$XCODE_WORKSPACE" \
               --scheme "$XCODE_SCHEME" \
               --archive-flags="-allowProvisioningUpdates" \
-              --archive-xcargs "CODE_SIGN_STYLE=Automatic" \
+              --archive-xcargs "$XCARGS" \
               --export-options-plist "$FALLBACK_PLIST"
     artifacts:
       - build/ios/ipa/*.ipa
