@@ -51,13 +51,16 @@ workflows:
           fi
           echo "SUPABASE_URL is set"
           echo "SUPABASE_ANON_KEY is set"
-      - name: Add signing certificates to keychain (if provided)
+      - name: Add signing certificates to keychain
         script: |
-          if [ -n "${CM_CERTIFICATE:-}" ]; then
-            keychain add-certificates
-          else
-            echo "Skipping keychain add-certificates (no iOS cert env provided)."
-          fi
+          # Import certificates and provisioning profiles managed by Codemagic
+          keychain add-certificates
+      - name: Debug signing assets
+        script: |
+          echo "-- Code signing identities --"
+          security find-identity -v -p codesigning || true
+          echo "-- Provisioning profiles --"
+          ls -al "$HOME/Library/MobileDevice/Provisioning Profiles" || true
       - name: Flutter build ios (no codesign)
         script: |
           flutter build ios --release --no-codesign \
@@ -67,39 +70,71 @@ workflows:
       - name: Configure Xcode project with provisioning profiles
         script: |
           xcode-project use-profiles
-      - name: Build IPA with Xcode (automatic signing)
+      - name: Detect matching provisioning profile
+        script: |
+          set -e
+          MATCHED_SPECIFIER=""
+          for p in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -f "$p" ] || continue
+            INFO=$(security cms -D -i "$p" 2>/dev/null || true)
+            NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            if [ -n "$APP_ID" ]; then
+              if [[ "$APP_ID" == "${APPLE_TEAM_ID:-}.$BUNDLE_ID" || "$APP_ID" == *".$BUNDLE_ID" ]]; then
+                MATCHED_SPECIFIER="$NAME"
+                echo "Matched profile specifier: $MATCHED_SPECIFIER for $APP_ID"
+                break
+              fi
+            fi
+          done
+          if [ -z "$MATCHED_SPECIFIER" ]; then
+            echo "ERROR: No provisioning profile found for bundle id $BUNDLE_ID after use-profiles."
+            ls -al "$HOME/Library/MobileDevice/Provisioning Profiles" || true
+            exit 1
+          fi
+          export PROFILE_SPECIFIER="$MATCHED_SPECIFIER"
+          if [ -n "${CM_ENV:-}" ]; then echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"; fi
+      - name: Show Xcode signing build settings
+        script: |
+          set -e
+          echo "--- Xcode Build Settings (signing-related) ---"
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -showBuildSettings | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM)"
+      - name: Build IPA with Xcode (manual signing)
         script: |
           # Strip injected export options envs and always provide our own file
           unset CM_EXPORT_OPTIONS || true
           unset EXPORT_OPTIONS_PLIST || true
           FALLBACK_PLIST="$HOME/export_options.plist"
           echo "Writing export options plist to $FALLBACK_PLIST"
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="UTF-8"?>' \
-            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
-            '<plist version="1.0">' \
-            '<dict>' \
-            '  <key>method</key>' \
-            '  <string>app-store</string>' \
-            '  <key>signingStyle</key>' \
-            '  <string>automatic</string>' \
-            '  <key>uploadBitcode</key>' \
-            '  <false/>' \
-            '  <key>compileBitcode</key>' \
-            '  <false/>' \
-            '</dict>' \
-            '</plist>' > "$FALLBACK_PLIST"
-          # Build XCARGS for automatic signing and correct bundle id
-          XCARGS="CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-          if [ -n "${APPLE_TEAM_ID:-}" ]; then
-            XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"
-          fi
+          cat > "$FALLBACK_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key>
+  <string>app-store</string>
+  <key>signingStyle</key>
+  <string>manual</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>$BUNDLE_ID</key>
+    <string>$PROFILE_SPECIFIER</string>
+  </dict>
+  <key>uploadBitcode</key>
+  <false/>
+  <key>compileBitcode</key>
+  <false/>
+</dict>
+</plist>
+EOF
+          EXTRA_XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER=$PROFILE_SPECIFIER PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+          if [ -n "${APPLE_TEAM_ID:-}" ]; then EXTRA_XCARGS="$EXTRA_XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
           env -u CM_EXPORT_OPTIONS -u EXPORT_OPTIONS_PLIST \
             xcode-project build-ipa \
               --workspace "$XCODE_WORKSPACE" \
               --scheme "$XCODE_SCHEME" \
               --archive-flags="-allowProvisioningUpdates" \
-              --archive-xcargs "$XCARGS" \
+              --archive-xcargs "$EXTRA_XCARGS" \
               --export-options-plist "$FALLBACK_PLIST"
     artifacts:
       - build/ios/ipa/*.ipa
@@ -114,63 +149,3 @@ workflows:
         # Optional: set changelog from last commit
         # changelog: "$CM_COMMIT_MESSAGE"
 
-  android_release:
-    name: Android Release (AAB+APK)
-    max_build_duration: 120
-    environment:
-      flutter: stable
-      groups:
-        - supabase_env         # SUPABASE_URL, SUPABASE_ANON_KEY
-        # Optional: android_signing  # ANDROID_KEYSTORE, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS (for Codemagic-managed signing)
-        # - revenuecat_env       # not used for Android
-    triggering:
-      events:
-        - push
-      branch_patterns:
-        - pattern: main
-          include: true
-          source: true
-      cancel_previous_builds: true
-    scripts:
-      - name: Flutter version
-        script: flutter --version
-      - name: Dependencies
-        script: flutter pub get
-      - name: Create .env from CI variables
-        script: |
-          echo "Creating .env for Flutter asset bundling"
-          {
-            [ -n "${SUPABASE_URL:-}" ] && echo "SUPABASE_URL=${SUPABASE_URL}";
-            [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
-          } > .env
-          echo ".env created"
-      - name: Generate launcher icons (idempotent)
-        script: dart run flutter_launcher_icons
-      - name: Generate native splash (idempotent)
-        script: dart run flutter_native_splash:create
-      - name: Verify required env vars (Supabase)
-        script: |
-          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
-            echo "Missing SUPABASE_URL or SUPABASE_ANON_KEY"
-            exit 1
-          fi
-          echo "SUPABASE_URL is set"
-          echo "SUPABASE_ANON_KEY is set"
-      - name: Build Android App Bundle (.aab)
-        script: |
-          flutter build appbundle --release \
-            --dart-define SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-      - name: Build Android APK (optional)
-        script: |
-          flutter build apk --release \
-            --dart-define SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-    artifacts:
-      - build/app/outputs/bundle/release/*.aab
-      - build/app/outputs/flutter-apk/*.apk
-    # Optional: automatic publish to Google Play if you add credentials
-    # publishing:
-    #   google_play:
-    #     credentials: $GOOGLE_PLAY_SERVICE_ACCOUNT_CREDENTIALS   # JSON content
-    #     track: internal
