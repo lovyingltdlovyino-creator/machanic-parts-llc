@@ -62,7 +62,7 @@ workflows:
           set -e || true
           # Never fail this step; continue to fallback/import and use-profiles
           true
-      - name: Fallback: install signing assets from env (if provided)
+      - name: "Fallback: install signing assets from env (if provided)"
         script: |
           set -e
           CERT_TMP="$HOME/certificate.p12"
