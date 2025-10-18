@@ -51,16 +51,7 @@ workflows:
           fi
           echo "SUPABASE_URL is set"
           echo "SUPABASE_ANON_KEY is set"
-      - name: Fetch signing files (App Store Connect)
-        script: |
-          set -e
-          echo "Fetching signing files for $BUNDLE_ID (App Store)"
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE \
-            --create \
-            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
-            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
-            --private-key @env:APP_STORE_CONNECT_PRIVATE_KEY
+      # Manual signing path: upload P12 and provisioning profile in Codemagic UI
       - name: Add signing certificates to keychain
         script: |
           # Import certificates only if provided (manual signing). Codemagic Automatic
@@ -84,21 +75,26 @@ workflows:
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
-      - name: Configure Xcode project with provisioning profiles (if available)
+      - name: Configure Xcode project with provisioning profiles
         script: |
-          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          if ls "$PROFILE_DIR"/*.mobileprovision >/dev/null 2>&1; then
-            echo "Found provisioning profiles, applying with xcode-project use-profiles"
-            xcode-project use-profiles
-          else
-            echo "No provisioning profiles found; skipping use-profiles (will use Automatic signing)."
+          xcode-project use-profiles
+      - name: Read provisioning profile specifier from build settings
+        script: |
+          set -e
+          SPEC=$(xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -showBuildSettings | sed -n 's/^\s*PROVISIONING_PROFILE_SPECIFIER = \(.*\)/\1/p' | head -n1 | xargs)
+          if [ -z "$SPEC" ]; then
+            echo "ERROR: PROVISIONING_PROFILE_SPECIFIER not set. Ensure you uploaded a provisioning profile for $BUNDLE_ID in Codemagic (Manual signing)."
+            exit 1
           fi
+          echo "PROFILE_SPECIFIER=$SPEC"
+          export PROFILE_SPECIFIER="$SPEC"
+          if [ -n "${CM_ENV:-}" ]; then echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"; fi
       - name: Show Xcode signing build settings
         script: |
           set -e
           echo "--- Xcode Build Settings (signing-related) ---"
           xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -showBuildSettings | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM)"
-      - name: Archive and Export IPA with xcodebuild (Automatic signing)
+      - name: Build IPA with Xcode (manual signing)
         script: |
           # Strip injected export options envs and always provide our own file
           unset CM_EXPORT_OPTIONS || true
@@ -113,21 +109,28 @@ workflows:
             '  <key>method</key>' \
             '  <string>app-store</string>' \
             '  <key>signingStyle</key>' \
-            '  <string>automatic</string>' \
+            '  <string>manual</string>' \
+            '  <key>provisioningProfiles</key>' \
+            '  <dict>' \
+            "    <key>$BUNDLE_ID</key>" \
+            "    <string>$PROFILE_SPECIFIER</string>" \
+            '  </dict>' \
             '  <key>uploadBitcode</key>' \
             '  <false/>' \
             '  <key>compileBitcode</key>' \
             '  <false/>' \
             '</dict>' \
             '</plist>' > "$FALLBACK_PLIST"
-          ARCHIVE_PATH="$PWD/build/ios/archive/Runner.xcarchive"
-          mkdir -p "$(dirname "$ARCHIVE_PATH")" build/ios/ipa
-          EXTRA_XCARGS="CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-          if [ -n "${APPLE_TEAM_ID:-}" ]; then EXTRA_XCARGS="$EXTRA_XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
-          echo "Archiving with: $EXTRA_XCARGS"
-          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -allowProvisioningUpdates -archivePath "$ARCHIVE_PATH" archive $EXTRA_XCARGS
-          echo "Exporting IPA..."
-          xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportOptionsPlist "$FALLBACK_PLIST" -exportPath build/ios/ipa
+          # Force manual signing and correct identifiers
+          XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER=$PROFILE_SPECIFIER PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+          if [ -n "${APPLE_TEAM_ID:-}" ]; then XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
+          env -u CM_EXPORT_OPTIONS -u EXPORT_OPTIONS_PLIST \
+            xcode-project build-ipa \
+              --workspace "$XCODE_WORKSPACE" \
+              --scheme "$XCODE_SCHEME" \
+              --archive-flags="-allowProvisioningUpdates" \
+              --archive-xcargs "$XCARGS" \
+              --export-options-plist "$FALLBACK_PLIST"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/archive/*.xcarchive
