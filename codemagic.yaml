@@ -54,15 +54,8 @@ workflows:
       # Manual signing path: upload P12 and provisioning profile in Codemagic UI
       - name: Add signing certificates to keychain
         script: |
-          # Import certificates only if provided (manual signing). Codemagic Automatic
-          # signing may not place .p12 files in the Certificates folder.
-          CERT_DIR="$HOME/Library/MobileDevice/Certificates"
-          if ls "$CERT_DIR"/*.p12 >/dev/null 2>&1 || [ -n "${CM_CERTIFICATE:-}" ]; then
-            echo "Importing signing certificates from $CERT_DIR or env..."
-            keychain add-certificates
-          else
-            echo "No .p12 certificates provided; skipping import (expecting Codemagic Automatic signing)."
-          fi
+          # Import certificates and provisioning profiles managed by Codemagic
+          keychain add-certificates
       - name: Debug signing assets
         script: |
           echo "-- Code signing identities --"
