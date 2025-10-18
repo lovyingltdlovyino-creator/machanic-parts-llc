@@ -53,8 +53,15 @@ workflows:
           echo "SUPABASE_ANON_KEY is set"
       - name: Add signing certificates to keychain
         script: |
-          # Import certificates and provisioning profiles managed by Codemagic
-          keychain add-certificates
+          # Import certificates only if provided (manual signing). Codemagic Automatic
+          # signing may not place .p12 files in the Certificates folder.
+          CERT_DIR="$HOME/Library/MobileDevice/Certificates"
+          if ls "$CERT_DIR"/*.p12 >/dev/null 2>&1 || [ -n "${CM_CERTIFICATE:-}" ]; then
+            echo "Importing signing certificates from $CERT_DIR or env..."
+            keychain add-certificates
+          else
+            echo "No .p12 certificates provided; skipping import (expecting Codemagic Automatic signing)."
+          fi
       - name: Debug signing assets
         script: |
           echo "-- Code signing identities --"
