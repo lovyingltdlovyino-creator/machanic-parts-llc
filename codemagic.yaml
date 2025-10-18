@@ -55,7 +55,29 @@ workflows:
       - name: Add signing certificates to keychain
         script: |
           # Import certificates and provisioning profiles managed by Codemagic
+          set +e
           keychain add-certificates
+          STATUS=$?
+          echo "keychain add-certificates exit code: $STATUS"
+          set -e || true
+          # Never fail this step; continue to fallback/import and use-profiles
+          true
+      - name: Fallback: install signing assets from env (if provided)
+        script: |
+          set -e
+          CERT_TMP="$HOME/certificate.p12"
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILE_DIR"
+          if [ -n "${IOS_CERTIFICATE_P12:-}" ] && [ -n "${IOS_CERTIFICATE_PASSWORD:-}" ]; then
+            echo "Decoding IOS_CERTIFICATE_P12 from env"
+            echo "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_TMP"
+            security import "$CERT_TMP" -k "$HOME/Library/Keychains/login.keychain-db" -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security || true
+            rm -f "$CERT_TMP"
+          fi
+          if [ -n "${IOS_PROVISIONING_PROFILE:-}" ]; then
+            echo "Decoding IOS_PROVISIONING_PROFILE from env"
+            echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > "$PROFILE_DIR/Manual.mobileprovision"
+          fi
       - name: Debug signing assets
         script: |
           echo "-- Code signing identities --"
