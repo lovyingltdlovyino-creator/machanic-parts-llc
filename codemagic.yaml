@@ -93,118 +93,78 @@ workflows:
       - name: Configure Xcode project with provisioning profiles
         script: |
           xcode-project use-profiles
-      - name: Read provisioning profile specifier from build settings
+      - name: Resolve provisioning profile UUID (force)
         script: |
           set -e
-          DEST="generic/platform=iOS"
-          SPEC=$(xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphoneos -destination "$DEST" -showBuildSettings | sed -n 's/^\s*PROVISIONING_PROFILE_SPECIFIER = \(.*\)/\1/p' | head -n1 | xargs || true)
-          if [ -n "$SPEC" ]; then
-            echo "PROFILE_SPECIFIER=$SPEC"
-            export PROFILE_SPECIFIER="$SPEC"
-            if [ -n "${CM_ENV:-}" ]; then echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"; fi
-          else
-            echo "PROFILE_SPECIFIER not found in build settings. Searching installed provisioning profiles..."
-            PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-            MATCH_NAME=""
-            MATCH_UUID=""
-            for p in "$PROFILE_DIR"/*.mobileprovision; do
-              [ -f "$p" ] || continue
-              INFO=$(security cms -D -i "$p" 2>/dev/null || true)
-              NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< "$INFO" 2>/dev/null || true)
-              UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< "$INFO" 2>/dev/null || true)
-              APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< "$INFO" 2>/dev/null || true)
-              if [ -n "$APP_ID" ]; then
-                if [[ "$APP_ID" == "${APPLE_TEAM_ID:-}.$BUNDLE_ID" || "$APP_ID" == *".$BUNDLE_ID" ]]; then
-                  MATCH_NAME="$NAME"
-                  MATCH_UUID="$UUID"
-                  echo "Matched provisioning profile: name='$MATCH_NAME' uuid='$MATCH_UUID' for $APP_ID"
-                  break
-                fi
+          PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          MATCH_NAME=""
+          MATCH_UUID=""
+          for p in "$PROFILE_DIR"/*.mobileprovision; do
+            [ -f "$p" ] || continue
+            INFO=$(security cms -D -i "$p" 2>/dev/null || true)
+            NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            if [ -n "$APP_ID" ]; then
+              if [[ "$APP_ID" == "${APPLE_TEAM_ID:-}.$BUNDLE_ID" || "$APP_ID" == *".$BUNDLE_ID" ]]; then
+                MATCH_NAME="$NAME"
+                MATCH_UUID="$UUID"
+                echo "Matched provisioning profile: name='$MATCH_NAME' uuid='$MATCH_UUID' for $APP_ID"
+                break
               fi
-            done
-            if [ -n "$MATCH_NAME" ]; then
-              export PROFILE_SPECIFIER="$MATCH_NAME"
-              if [ -n "${CM_ENV:-}" ]; then echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"; fi
             fi
-            if [ -n "$MATCH_UUID" ]; then
-              export PROFILE_UUID="$MATCH_UUID"
-              if [ -n "${CM_ENV:-}" ]; then echo "PROFILE_UUID=$PROFILE_UUID" >> "$CM_ENV"; fi
-            fi
-            if [ -z "${PROFILE_SPECIFIER:-}" ] && [ -z "${PROFILE_UUID:-}" ]; then
-              echo "WARN: No matching provisioning profile found. Will attempt Automatic signing later."
-              export SIGN_FALLBACK="auto"
-              if [ -n "${CM_ENV:-}" ]; then echo "SIGN_FALLBACK=auto" >> "$CM_ENV"; fi
-            fi
+          done
+          if [ -z "$MATCH_UUID" ]; then
+            echo "ERROR: No provisioning profile found for $BUNDLE_ID in $PROFILE_DIR. Upload an App Store profile or set IOS_PROVISIONING_PROFILE env."
+            exit 1
+          fi
+          export PROFILE_UUID="$MATCH_UUID"
+          export PROFILE_NAME="$MATCH_NAME"
+          export PROFILE_SPECIFIER="$MATCH_NAME"
+          if [ -n "${CM_ENV:-}" ]; then
+            echo "PROFILE_UUID=$PROFILE_UUID" >> "$CM_ENV"
+            echo "PROFILE_NAME=$PROFILE_NAME" >> "$CM_ENV"
+            echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"
           fi
       - name: Show Xcode signing build settings
         script: |
           set -e
           echo "--- Xcode Build Settings (signing-related) ---"
           xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -showBuildSettings | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM)"
-      - name: Build IPA with XCode (manual signing)
+      - name: Build IPA with Xcode (manual signing, UUID)
         script: |
           # Strip injected export options envs and always provide our own file
           unset CM_EXPORT_OPTIONS || true
           unset EXPORT_OPTIONS_PLIST || true
           FALLBACK_PLIST="$HOME/export_options.plist"
           echo "Writing export options plist to $FALLBACK_PLIST"
-          if [ -n "${PROFILE_SPECIFIER:-}" ]; then
-            printf '%s\n' \
-              '<?xml version="1.0" encoding="UTF-8"?>' \
-              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
-              '<plist version="1.0">' \
-              '<dict>' \
-              '  <key>method</key>' \
-              '  <string>app-store</string>' \
-              '  <key>signingStyle</key>' \
-              '  <string>manual</string>' \
-              '  <key>provisioningProfiles</key>' \
-              '  <dict>' \
-              "    <key>$BUNDLE_ID</key>" \
-              "    <string>$PROFILE_SPECIFIER</string>" \
-              '  </dict>' \
-              '  <key>uploadBitcode</key>' \
-              '  <false/>' \
-              '  <key>compileBitcode</key>' \
-              '  <false/>' \
-              '</dict>' \
-              '</plist>' > "$FALLBACK_PLIST"
-            XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER=$PROFILE_SPECIFIER PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-          elif [ -n "${PROFILE_UUID:-}" ]; then
-            printf '%s\n' \
-              '<?xml version="1.0" encoding="UTF-8"?>' \
-              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
-              '<plist version="1.0">' \
-              '<dict>' \
-              '  <key>method</key>' \
-              '  <string>app-store</string>' \
-              '  <key>signingStyle</key>' \
-              '  <string>automatic</string>' \
-              '  <key>uploadBitcode</key>' \
-              '  <false/>' \
-              '  <key>compileBitcode</key>' \
-              '  <false/>' \
-              '</dict>' \
-              '</plist>' > "$FALLBACK_PLIST"
-            XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=$PROFILE_UUID PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-          else
-            printf '%s\n' \
-              '<?xml version="1.0" encoding="UTF-8"?>' \
-              '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
-              '<plist version="1.0">' \
-              '<dict>' \
-              '  <key>method</key>' \
-              '  <string>app-store</string>' \
-              '  <key>signingStyle</key>' \
-              '  <string>automatic</string>' \
-              '  <key>uploadBitcode</key>' \
-              '  <false/>' \
-              '  <key>compileBitcode</key>' \
-              '  <false/>' \
-              '</dict>' \
-              '</plist>' > "$FALLBACK_PLIST"
-            XCARGS="CODE_SIGN_STYLE=Automatic PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+          # Require UUID and map export to the profile name
+          if [ -z "${PROFILE_UUID:-}" ]; then
+            echo "ERROR: PROFILE_UUID is not set; cannot proceed with manual signing."
+            exit 1
           fi
+          EXPORT_NAME="${PROFILE_NAME:-${PROFILE_SPECIFIER:-AppStoreProfile}}"
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="UTF-8"?>' \
+            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+            '<plist version="1.0">' \
+            '<dict>' \
+            '  <key>method</key>' \
+            '  <string>app-store</string>' \
+            '  <key>signingStyle</key>' \
+            '  <string>manual</string>' \
+            '  <key>provisioningProfiles</key>' \
+            '  <dict>' \
+            "    <key>$BUNDLE_ID</key>" \
+            "    <string>$EXPORT_NAME</string>" \
+            '  </dict>' \
+            '  <key>uploadBitcode</key>' \
+            '  <false/>' \
+            '  <key>compileBitcode</key>' \
+            '  <false/>' \
+            '</dict>' \
+            '</plist>' > "$FALLBACK_PLIST"
+          XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=$PROFILE_UUID PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
           if [ -n "${APPLE_TEAM_ID:-}" ]; then XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
           env -u CM_EXPORT_OPTIONS -u EXPORT_OPTIONS_PLIST \
             xcode-project build-ipa \
