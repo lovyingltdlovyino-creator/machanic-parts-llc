@@ -54,11 +54,20 @@ workflows:
       # Automatic signing: fetch/create certs & profiles via App Store Connect, then import
       - name: Set up iOS code signing (fetch & import)
         script: |
-          set -e
+          set +e
           echo "Fetching signing files from App Store Connect for $BUNDLE_ID (IOS_APP_STORE)..."
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          FETCH_STATUS=$?
+          if [ $FETCH_STATUS -ne 0 ]; then
+            echo "WARN: fetch-signing-files failed (code $FETCH_STATUS). Continuing with Codemagic UI certificates and env fallback."
+          fi
           echo "Importing certificates into keychain..."
           keychain add-certificates
+          KEYCHAIN_STATUS=$?
+          if [ $KEYCHAIN_STATUS -ne 0 ]; then
+            echo "WARN: keychain add-certificates failed (code $KEYCHAIN_STATUS). Will rely on env fallback if provided."
+          fi
+          set -e || true
       - name: "Fallback: install signing assets from env (if provided)"
         script: |
           set -e
