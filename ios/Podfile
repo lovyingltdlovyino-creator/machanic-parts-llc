@@ -1,0 +1,50 @@
+# frozen_string_literal: true
+
+platform :ios, '13.0'
+
+# CocoaPods analytics are disabled for this project.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+# Locate FLUTTER_ROOT from Generated.xcconfig
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise 'Generated.xcconfig must exist. If you\'re running pod install manually, run `flutter pub get` first.'
+  end
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise 'FLUTTER_ROOT not found.'
+end
+
+require File.expand_path(File.join(flutter_root, 'packages', 'flutter_tools', 'bin', 'podhelper.rb'))
+
+flutter_ios_podfile_setup
+
+# Main application target
+target 'Runner' do
+  # Let Flutter add all required pods
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+# Apply additional build settings after pods are installed
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    # Keep Flutter defaults
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Do not code sign CocoaPods targets (prevents "requires a development team" errors)
+      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+      config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+      # Harmonize the minimum iOS version to quiet warnings
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
+  end
+end
