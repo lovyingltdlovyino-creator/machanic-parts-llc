@@ -119,7 +119,8 @@ jobs:
           }
           JSON
           # Download and install App Store provisioning profile into ~/Library/MobileDevice/Provisioning Profiles
-          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --skip_install false --adhoc false --development false --force true --platform ios
+          # Note: Don't pass boolean flags with "false"; presence enables them. App Store is default when neither --adhoc nor --development is set.
+          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision | head -n 1)
           if [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh" >&2; exit 1; fi
