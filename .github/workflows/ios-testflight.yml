@@ -41,12 +41,20 @@ jobs:
           IOS_CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
           IOS_CERT_P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
         run: |
-          echo "$IOS_CERT_P12_BASE64" | base64 --decode > /tmp/signing.p12
+          # Cross-platform decode (GNU base64 -d or BSD base64 -D)
+          printf "%s" "$IOS_CERT_P12_BASE64" | base64 -d > /tmp/signing.p12 2>/dev/null || \
+          printf "%s" "$IOS_CERT_P12_BASE64" | base64 -D > /tmp/signing.p12
+          if [ ! -s /tmp/signing.p12 ]; then echo "Decoded P12 is empty; check IOS_CERT_P12_BASE64" >&2; exit 1; fi
+          # Trim CR/LF from password (Windows copy can add CR; ensure no newline)
+          P12_PASS=$(printf "%s" "$IOS_CERT_P12_PASSWORD" | tr -d '\r\n')
           # Validate password quietly
-          if ! /usr/bin/openssl pkcs12 -in /tmp/signing.p12 -passin pass:"$IOS_CERT_P12_PASSWORD" -info -noout >/dev/null 2>&1; then
+          if ! /usr/bin/openssl pkcs12 -in /tmp/signing.p12 -passin pass:"$P12_PASS" -info -noout >/dev/null 2>&1; then
             echo "P12 password validation failed. Update IOS_CERT_P12_PASSWORD to match the exported .p12." >&2
             exit 1
           fi
+          # Optional: show cert label/subject to confirm correct file (no private key output)
+          /usr/bin/openssl pkcs12 -in /tmp/signing.p12 -passin pass:"$P12_PASS" -nokeys -clcerts 2>/dev/null | \
+            /usr/bin/awk '/friendlyName|subject/ {print}' || true
 
       - name: Create keychain and import cert
         env:
@@ -59,7 +67,8 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
           # Import certificate into custom keychain
-          security import /tmp/signing.p12 -k "$KEYCHAIN_NAME" -f pkcs12 -P "$IOS_CERT_P12_PASSWORD" -A -T /usr/bin/codesign -T /usr/bin/security
+          P12_PASS=$(printf "%s" "$IOS_CERT_P12_PASSWORD" | tr -d '\r\n')
+          security import /tmp/signing.p12 -k "$KEYCHAIN_NAME" -f pkcs12 -P "$P12_PASS" -A -T /usr/bin/codesign -T /usr/bin/security
           # Make custom keychain the default and in search list
           security list-keychains -d user -s "$KEYCHAIN_NAME" login.keychain
           security default-keychain -s "$KEYCHAIN_NAME"
@@ -79,7 +88,9 @@ jobs:
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PP_DIR"
           PROFILE_PATH="$PP_DIR/AppStore.mobileprovision"
-          echo "$IOS_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          # Cross-platform decode for profile
+          printf "%s" "$IOS_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH" 2>/dev/null || \
+          printf "%s" "$IOS_PROFILE_BASE64" | base64 -D > "$PROFILE_PATH"
           echo "Installed provisioning profile at: $PROFILE_PATH"
           # Extract profile Name into env for later use
           PROFILE_NAME=$(/usr/bin/security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
