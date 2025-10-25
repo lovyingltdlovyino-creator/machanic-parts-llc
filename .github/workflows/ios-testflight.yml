@@ -96,21 +96,36 @@ jobs:
           echo "KEYCHAIN_PATH=$HOME/Library/Keychains/${KEYCHAIN_NAME}-db" >> "$GITHUB_ENV"
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Install provisioning profile
-        env:
-          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+      - name: Install Fastlane
         run: |
+          sudo gem install fastlane -N
+          fastlane --version
+
+      - name: Download App Store profile via Fastlane (sigh)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          KEY_JSON_PATH="$PWD/api_key.json"
+          KEY_CONTENT=$(printf "%s" "$ASC_KEY_P8_BASE64" | base64 -d | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')
+          cat > "$KEY_JSON_PATH" <<JSON
+          {
+            "key_id": "$ASC_KEY_ID",
+            "issuer_id": "$ASC_ISSUER_ID",
+            "key": "$KEY_CONTENT",
+            "in_house": false
+          }
+          JSON
+          # Download and install App Store provisioning profile into ~/Library/MobileDevice/Provisioning Profiles
+          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --skip_install false --adhoc false --development false --force true --platform ios
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PP_DIR"
-          PROFILE_PATH="$PP_DIR/AppStore.mobileprovision"
-          # Cross-platform decode for profile
-          printf "%s" "$IOS_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH" 2>/dev/null || \
-          printf "%s" "$IOS_PROFILE_BASE64" | base64 -D > "$PROFILE_PATH"
-          echo "Installed provisioning profile at: $PROFILE_PATH"
-          # Extract profile Name into env for later use
+          PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision | head -n 1)
+          if [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh" >&2; exit 1; fi
           PROFILE_NAME=$(/usr/bin/security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
+          echo "Using profile: $PROFILE_NAME ($PROFILE_PATH)"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          ls -al "$PP_DIR"
 
       - name: Xcode archive (Manual signing)
         run: |
