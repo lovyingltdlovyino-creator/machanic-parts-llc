@@ -36,11 +36,41 @@ jobs:
           cd ios
           pod install
 
-      - name: Import signing certificate
-        uses: apple-actions/import-codesign-certs@v2
-        with:
-          p12-file-base64: ${{ secrets.IOS_CERT_P12_BASE64 }}
-          p12-password: ${{ secrets.IOS_CERT_P12_PASSWORD }}
+      - name: Decode and validate P12
+        env:
+          IOS_CERT_P12_BASE64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          IOS_CERT_P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
+        run: |
+          echo "$IOS_CERT_P12_BASE64" | base64 --decode > /tmp/signing.p12
+          # Validate password quietly
+          if ! /usr/bin/openssl pkcs12 -in /tmp/signing.p12 -passin pass:"$IOS_CERT_P12_PASSWORD" -info -noout >/dev/null 2>&1; then
+            echo "P12 password validation failed. Update IOS_CERT_P12_PASSWORD to match the exported .p12." >&2
+            exit 1
+          fi
+
+      - name: Create keychain and import cert
+        env:
+          IOS_CERT_P12_PASSWORD: ${{ secrets.IOS_CERT_P12_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_NAME=build.keychain
+          KEYCHAIN_PASSWORD="temp_keychain_pass"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_NAME"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_NAME"
+          # Import certificate into custom keychain
+          security import /tmp/signing.p12 -k "$KEYCHAIN_NAME" -f pkcs12 -P "$IOS_CERT_P12_PASSWORD" -A -T /usr/bin/codesign -T /usr/bin/security
+          # Make custom keychain the default and in search list
+          security list-keychains -d user -s "$KEYCHAIN_NAME" login.keychain
+          security default-keychain -s "$KEYCHAIN_NAME"
+          # Show available code signing identities
+          security find-identity -v -p codesigning || true
+          if ! security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
+            echo "ERROR: No 'Apple Distribution' identity available. Export the Apple Distribution .p12 (with private key) and update secrets." >&2
+            exit 1
+          fi
+          # Expose keychain path for xcodebuild
+          echo "KEYCHAIN_PATH=$HOME/Library/Keychains/${KEYCHAIN_NAME}-db" >> "$GITHUB_ENV"
 
       - name: Install provisioning profile
         env:
@@ -51,6 +81,9 @@ jobs:
           PROFILE_PATH="$PP_DIR/AppStore.mobileprovision"
           echo "$IOS_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
           echo "Installed provisioning profile at: $PROFILE_PATH"
+          # Extract profile Name into env for later use
+          PROFILE_NAME=$(/usr/bin/security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           ls -al "$PP_DIR"
 
       - name: Xcode archive (Manual signing)
@@ -65,7 +98,8 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=$TEAM_ID \
             PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID \
-            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROFILE_NAME }}" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            OTHER_CODE_SIGN_FLAGS="--keychain,$KEYCHAIN_PATH" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
 
@@ -81,7 +115,7 @@ jobs:
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
-              <key>$BUNDLE_ID</key><string>${{ secrets.IOS_PROFILE_NAME }}</string>
+              <key>$BUNDLE_ID</key><string>$PROFILE_NAME</string>
             </dict>
             <key>stripSwiftSymbols</key><true/>
             <key>compileBitcode</key><false/>

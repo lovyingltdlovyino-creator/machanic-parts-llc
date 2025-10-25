@@ -50,6 +50,7 @@ select_app_store_profile() {
   fi
   PROFILE_FILE="$candidate"
   PROFILE_NAME=$(security cms -D -i "$PROFILE_FILE" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
+  PROFILE_UUID=$(security cms -D -i "$PROFILE_FILE" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)
   log "Using provisioning profile: $PROFILE_NAME ($PROFILE_FILE)"
 }
 
@@ -71,7 +72,10 @@ main() {
 
   mkdir -p "$IPA_DIR" "$(dirname "$ARCHIVE_PATH")" "$(dirname "$EXPORT_PLIST")"
 
-  log "Archiving (manual signing, Apple Distribution)"
+  # Show effective signing settings before archive
+  xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -showBuildSettings | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM)" || true
+
+  log "Archiving (manual signing for Runner; Pods remain unsigned)"
   xcodebuild \
     -workspace "$WORKSPACE" \
     -scheme "$SCHEME" \
@@ -83,8 +87,8 @@ main() {
     DEVELOPMENT_TEAM="$TEAM_ID" \
     PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
     PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+    PROVISIONING_PROFILE="$PROFILE_UUID" \
     CODE_SIGN_IDENTITY="Apple Distribution" \
-    OTHER_CODE_SIGN_FLAGS="--keychain,$HOME/Library/Keychains/login.keychain-db" \
     CODE_SIGNING_REQUIRED=YES \
     CODE_SIGNING_ALLOWED=YES \
     archive | xcpretty || true
