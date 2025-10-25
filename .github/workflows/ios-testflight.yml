@@ -36,12 +36,22 @@ jobs:
           cd ios
           pod install
 
-      - name: Import signing certs and profile
+      - name: Import signing certificate
         uses: apple-actions/import-codesign-certs@v2
         with:
           p12-file-base64: ${{ secrets.IOS_CERT_P12_BASE64 }}
           p12-password: ${{ secrets.IOS_CERT_P12_PASSWORD }}
-          profile-file-base64: ${{ secrets.IOS_PROFILE_BASE64 }}
+
+      - name: Install provisioning profile
+        env:
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PP_DIR"
+          PROFILE_PATH="$PP_DIR/AppStore.mobileprovision"
+          echo "$IOS_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          echo "Installed provisioning profile at: $PROFILE_PATH"
+          ls -al "$PP_DIR"
 
       - name: Xcode archive (Manual signing)
         run: |
