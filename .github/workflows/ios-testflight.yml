@@ -120,10 +120,11 @@ jobs:
           JSON
           # Download and install App Store provisioning profile into ~/Library/MobileDevice/Provisioning Profiles
           # Note: Don't pass boolean flags with "false"; presence enables them. App Store is default when neither --adhoc nor --development is set.
-          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
-          PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision | head -n 1)
-          if [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh" >&2; exit 1; fi
+          mkdir -p "$PP_DIR"
+          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios --output_path "$PP_DIR"
+          PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision 2>/dev/null | head -n 1)
+          if [ -z "${PROFILE_PATH:-}" ] || [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh in $PP_DIR" >&2; ls -al "$PP_DIR" || true; exit 1; fi
           PROFILE_NAME=$(/usr/bin/security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
           echo "Using profile: $PROFILE_NAME ($PROFILE_PATH)"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
