@@ -122,12 +122,31 @@ jobs:
           # Note: Don't pass boolean flags with "false"; presence enables them. App Store is default when neither --adhoc nor --development is set.
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PP_DIR"
-          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios --output_path "$PP_DIR"
+          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios --skip_install true --output_path "$PP_DIR"
           PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision 2>/dev/null | head -n 1)
           if [ -z "${PROFILE_PATH:-}" ] || [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh in $PP_DIR" >&2; ls -al "$PP_DIR" || true; exit 1; fi
-          PROFILE_NAME=$(/usr/bin/security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin)
+          # Decode CMS to plist (fallback to extracting embedded plist if needed)
+          DECODED_PLIST="/tmp/profile_decoded.plist"
+          if ! /usr/bin/security cms -D -i "$PROFILE_PATH" > "$DECODED_PLIST" 2>/dev/null; then
+            # Fallback: extract XML plist block from the binary file
+            /usr/bin/awk 'BEGIN{f=0} /<plist/{f=1} f{print} /<\/[Pp][Ll][Ii][Ss][Tt]>/ {exit}' "$PROFILE_PATH" > "$DECODED_PLIST" || true
+          fi
+          if [ ! -s "$DECODED_PLIST" ]; then
+            echo "ERROR: Failed to decode provisioning profile: $PROFILE_PATH" >&2
+            ls -al "$PROFILE_PATH" || true
+            file "$PROFILE_PATH" || true
+            exit 1
+          fi
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$DECODED_PLIST" 2>/dev/null || echo "")
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$DECODED_PLIST" 2>/dev/null || echo "")
+          if [ -z "$PROFILE_NAME" ]; then
+            echo "ERROR: Could not parse profile Name from $DECODED_PLIST" >&2
+            head -n 60 "$DECODED_PLIST" || true
+            exit 1
+          fi
           echo "Using profile: $PROFILE_NAME ($PROFILE_PATH)"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+          if [ -n "$PROFILE_UUID" ]; then echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"; fi
 
       - name: Xcode archive (Manual signing)
         run: |
@@ -142,6 +161,7 @@ jobs:
             DEVELOPMENT_TEAM=$TEAM_ID \
             PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+            PROVISIONING_PROFILE="$PROFILE_UUID" \
             OTHER_CODE_SIGN_FLAGS="--keychain,$KEYCHAIN_PATH" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
