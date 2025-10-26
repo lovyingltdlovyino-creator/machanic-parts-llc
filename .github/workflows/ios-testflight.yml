@@ -96,54 +96,21 @@ jobs:
           echo "KEYCHAIN_PATH=$HOME/Library/Keychains/${KEYCHAIN_NAME}-db" >> "$GITHUB_ENV"
           echo "KEYCHAIN_PASSWORD=$KEYCHAIN_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Install Fastlane
-        run: |
-          sudo gem install fastlane -N
-          fastlane --version
-
-      - name: Repair App Store profile via Fastlane (sigh repair)
+      - name: Install provisioning profile (from secret)
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
         run: |
           set -euo pipefail
-          KEY_JSON_PATH="$PWD/api_key.json"
-          KEY_CONTENT=$(printf "%s" "$ASC_KEY_P8_BASE64" | base64 -d | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')
-          cat > "$KEY_JSON_PATH" <<JSON
-          {
-            "key_id": "$ASC_KEY_ID",
-            "issuer_id": "$ASC_ISSUER_ID",
-            "key": "$KEY_CONTENT",
-            "in_house": false
-          }
-          JSON
-          fastlane sigh repair --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --platform ios
-
-      - name: Download App Store profile via Fastlane (sigh)
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
-        run: |
-          set -euo pipefail
-          KEY_JSON_PATH="$PWD/api_key.json"
-          KEY_CONTENT=$(printf "%s" "$ASC_KEY_P8_BASE64" | base64 -d | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\n/g')
-          cat > "$KEY_JSON_PATH" <<JSON
-          {
-            "key_id": "$ASC_KEY_ID",
-            "issuer_id": "$ASC_ISSUER_ID",
-            "key": "$KEY_CONTENT",
-            "in_house": false
-          }
-          JSON
-          # Download and install App Store provisioning profile into ~/Library/MobileDevice/Provisioning Profiles
-          # Note: Don't pass boolean flags with "false"; presence enables them. App Store is default when neither --adhoc nor --development is set.
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PP_DIR"
-          fastlane sigh --api_key_path "$KEY_JSON_PATH" --app_identifier "$BUNDLE_ID" --team_id "$TEAM_ID" --force true --platform ios --skip_install true --output_path "$PP_DIR"
-          PROFILE_PATH=$(ls -t "$PP_DIR"/*.mobileprovision 2>/dev/null | head -n 1)
-          if [ -z "${PROFILE_PATH:-}" ] || [ ! -s "$PROFILE_PATH" ]; then echo "ERROR: No mobileprovision installed by sigh in $PP_DIR" >&2; ls -al "$PP_DIR" || true; exit 1; fi
+          PROFILE_PATH="$PP_DIR/AppStore.mobileprovision"
+          # Decode base64 (GNU -d or BSD -D)
+          printf "%s" "$IOS_PROFILE_BASE64" | base64 -d > "$PROFILE_PATH" 2>/dev/null || \
+          printf "%s" "$IOS_PROFILE_BASE64" | base64 -D > "$PROFILE_PATH"
+          if [ ! -s "$PROFILE_PATH" ]; then
+            echo "ERROR: Decoded profile is empty; ensure IOS_PROFILE_BASE64 is set to the base64 of the .mobileprovision" >&2
+            exit 1
+          fi
           # Decode CMS to plist (fallback to extracting embedded plist if needed)
           DECODED_PLIST="/tmp/profile_decoded.plist"
           if ! /usr/bin/security cms -D -i "$PROFILE_PATH" > "$DECODED_PLIST" 2>/dev/null; then
@@ -151,25 +118,14 @@ jobs:
             /usr/bin/awk 'BEGIN{f=0} /<plist/{f=1} f{print} /<\/[Pp][Ll][Ii][Ss][Tt]>/ {exit}' "$PROFILE_PATH" > "$DECODED_PLIST" || true
           fi
           if [ ! -s "$DECODED_PLIST" ]; then
-            echo "ERROR: Failed to decode provisioning profile: $PROFILE_PATH" >&2
-            ls -al "$PROFILE_PATH" || true
-            file "$PROFILE_PATH" || true
+            echo "ERROR: Failed to decode provisioning profile" >&2
             exit 1
           fi
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$DECODED_PLIST" 2>/dev/null || echo "")
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$DECODED_PLIST" 2>/dev/null || echo "")
-          TEAM_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$DECODED_PLIST" 2>/dev/null || echo "")
-          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$DECODED_PLIST" 2>/dev/null || echo "")
-          if [ -z "$PROFILE_NAME" ]; then
-            echo "ERROR: Could not parse profile Name from $DECODED_PLIST" >&2
-            head -n 60 "$DECODED_PLIST" || true
-            exit 1
-          fi
-          echo "Using profile: $PROFILE_NAME ($PROFILE_PATH)"
-          echo "Profile TeamIdentifier: $TEAM_IDENTIFIER"
-          echo "Profile application-identifier: $APP_ID"
+          echo "Using provisioning profile: $PROFILE_NAME ($PROFILE_UUID)"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
-          if [ -n "$PROFILE_UUID" ]; then echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"; fi
+          echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"
 
       - name: Show signing build settings
         run: |
