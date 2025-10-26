@@ -132,6 +132,34 @@ jobs:
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -showBuildSettings \
           | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PROVISIONING_PROFILE_SUPPORTED|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM|\s*CODE_SIGN_ENTITLEMENTS)"
 
+      - name: Debug certificate and profile
+        run: |
+          echo "=== Installed Code Signing Certificates ==="
+          security find-identity -v -p codesigning
+          echo "=== Installed Provisioning Profiles ==="
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
+          echo "=== Profile Details ==="
+          PROFILE_PATH=$(ls -t ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision | head -n1)
+          echo "Using profile: $PROFILE_PATH"
+          /usr/bin/security cms -D -i "$PROFILE_PATH" > /tmp/profile.plist
+          echo "Profile Name: $(/usr/libexec/PlistBuddy -c 'Print :Name' /tmp/profile.plist 2>/dev/null || echo 'Not found')"
+          echo "Profile UUID: $(/usr/libexec/PlistBuddy -c 'Print :UUID' /tmp/profile.plist 2>/dev/null || echo 'Not found')"
+          echo "Team ID: $(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' /tmp/profile.plist 2>/dev/null || echo 'Not found')"
+          echo "App ID: $(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' /tmp/profile.plist 2>/dev/null || echo 'Not found')"
+          echo "=== Certificate In Profile ==="
+          /usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates' /tmp/profile.plist | grep -A 3 data || echo "No certificates found"
+          
+          # Extract certificate from provisioning profile and show details
+          echo "=== Certificate Details from Profile ==="
+          /usr/libexec/PlistBuddy -c 'Print :DeveloperCertificates:0' /tmp/profile.plist > /tmp/cert.der
+          openssl x509 -inform DER -in /tmp/cert.der -noout -subject -fingerprint 2>/dev/null || echo "Failed to extract certificate details"
+          
+          # Extract Apple Distribution certificate from keychain and compare
+          echo "=== Keychain Certificate Details ==="
+          security find-certificate -a -c "Apple Distribution" -p | openssl x509 -noout -subject -fingerprint || echo "Failed to find certificate in keychain"
+          
+          echo "=== Compare Certificate Fingerprints (should match) ==="
+
       - name: Xcode archive (Manual signing)
         run: |
           set -o pipefail
@@ -150,7 +178,7 @@ jobs:
             PROVISIONING_PROFILE="$PROFILE_UUID" \
             PROVISIONING_PROFILE_SUPPORTED=YES \
             OTHER_CODE_SIGN_FLAGS="--keychain,$KEYCHAIN_PATH" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY="Apple Distribution: LOVE OKPO OMENOGOR (75U4C4C87J)" \
             archive | tee build/ios/archive.log
 
       - name: Upload archive log on failure
@@ -184,7 +212,7 @@ jobs:
           <dict>
             <key>method</key><string>app-store</string>
             <key>teamID</key><string>$TEAM_ID</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>signingCertificate</key><string>Apple Distribution: LOVE OKPO OMENOGOR (75U4C4C87J)</string>
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
