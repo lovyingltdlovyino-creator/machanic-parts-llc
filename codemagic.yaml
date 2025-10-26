@@ -55,23 +55,11 @@ workflows:
           echo "SUPABASE_URL is set"
           echo "SUPABASE_ANON_KEY is set"
       # Automatic signing: fetch/create certs & profiles via App Store Connect, then import
-      - name: Set up iOS code signing (fetch & import)
+      - name: Set up iOS code signing (prepare keychain)
         script: |
           keychain initialize
-          set +e
-          echo "Fetching signing files from App Store Connect for $BUNDLE_ID (IOS_APP_STORE)..."
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          FETCH_STATUS=$?
-          if [ $FETCH_STATUS -ne 0 ]; then
-            echo "WARN: fetch-signing-files failed (code $FETCH_STATUS). Continuing with Codemagic UI certificates and env fallback."
-          fi
-          echo "Importing certificates into keychain..."
-          keychain add-certificates
-          KEYCHAIN_STATUS=$?
-          if [ $KEYCHAIN_STATUS -ne 0 ]; then
-            echo "WARN: keychain add-certificates failed (code $KEYCHAIN_STATUS). Will rely on env fallback if provided."
-          fi
-          set -e || true
+          set -e
+          echo "Using manual signing - skipping automatic certificate fetching"
       - name: "Fallback: install signing assets from env (if provided)"
         script: |
           set -e
@@ -90,11 +78,31 @@ workflows:
           fi
       - name: Debug signing assets
         script: |
-          echo "-- Code signing identities --"
+          echo "-- Before manual import: Code signing identities --"
           security find-identity -v -p codesigning || true
-          echo "-- Provisioning profiles --"
+          echo "-- Before manual import: Provisioning profiles --"
           ls -al "$HOME/Library/MobileDevice/Provisioning Profiles" || true
-          # Fail early if Distribution identity is not present
+          
+          # Force manual import of certificate from env vars
+          if [ -n "${IOS_CERTIFICATE_P12:-}" ] && [ -n "${IOS_CERTIFICATE_PASSWORD:-}" ]; then
+            echo "Manually importing certificate from IOS_CERTIFICATE_P12..."
+            CERT_PATH="$HOME/certificate.p12"
+            echo "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_PATH"
+            
+            # Delete any existing keychains to start fresh
+            security default-keychain -s login.keychain
+            echo "Importing certificate to keychain..."
+            security import "$CERT_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k ~/Library/Keychains/login.keychain-db
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db
+            rm -f "$CERT_PATH"
+            
+            echo "-- After manual import: Code signing identities --"
+            security find-identity -v -p codesigning || true
+          else
+            echo "ERROR: IOS_CERTIFICATE_P12 or IOS_CERTIFICATE_PASSWORD environment variables not set"
+          fi
+          
+          # Now check if we have the identity
           if ! security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
             echo "ERROR: Missing 'Apple Distribution' signing identity with private key."
             echo "Upload a Distribution .p12 with password in Codemagic Code signing, or set IOS_CERTIFICATE_P12/IOS_CERTIFICATE_PASSWORD env vars."
