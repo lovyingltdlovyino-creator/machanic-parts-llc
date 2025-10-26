@@ -1,7 +1,7 @@
 workflows:
   ios_app_store:
     name: iOS App Store
-    instance_type: mac_pro
+    instance_type: mac_mini_m1
     max_build_duration: 120
     environment:
       flutter: stable
