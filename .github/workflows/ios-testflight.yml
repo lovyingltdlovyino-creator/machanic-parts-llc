@@ -1,9 +1,13 @@
 name: iOS TestFlight
+# NOTE: This workflow is kept for reference only.
+# iOS deployment has been migrated to Codemagic.
+# See codemagic.yaml for the current deployment configuration.
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
+  # Disabled automatic triggers - now using Codemagic for iOS deployment
+  # push:
+  #   branches: [ main ]
 
 jobs:
   ios:

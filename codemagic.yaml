@@ -1,6 +1,7 @@
 workflows:
   ios_app_store:
     name: iOS App Store
+    instance_type: mac_pro
     max_build_duration: 120
     environment:
       flutter: stable
@@ -17,6 +18,8 @@ workflows:
         BUNDLE_ID: com.mechanicpart.mechanicPart
         XCODE_WORKSPACE: ios/Runner.xcworkspace
         XCODE_SCHEME: Runner
+        # Explicitly set the iOS deployment target
+        IOS_DEPLOYMENT_TARGET: "13.0"
     triggering:
       events:
         - push
@@ -54,6 +57,7 @@ workflows:
       # Automatic signing: fetch/create certs & profiles via App Store Connect, then import
       - name: Set up iOS code signing (fetch & import)
         script: |
+          keychain initialize
           set +e
           echo "Fetching signing files from App Store Connect for $BUNDLE_ID (IOS_APP_STORE)..."
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
@@ -98,6 +102,9 @@ workflows:
           fi
       - name: Flutter build ios (no codesign)
         script: |
+          # Make sure Podfile has correct deployment target
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '$IOS_DEPLOYMENT_TARGET'/g" ios/Podfile
+          flutter clean
           flutter build ios --release --no-codesign \
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
@@ -207,6 +214,14 @@ workflows:
           fi
           echo "Exporting IPA..."
           xcodebuild -exportArchive -archivePath "$ARCHIVE_PATH" -exportOptionsPlist "$FALLBACK_PLIST" -exportPath build/ios/ipa -allowProvisioningUpdates
+          
+          # Verify IPA was created
+          if [ ! -f build/ios/ipa/*.ipa ]; then
+            echo "Error: IPA file not generated. Check export log above."
+            exit 1
+          fi
+          
+          echo "IPA Successfully created at: $(ls build/ios/ipa/*.ipa)"
     artifacts:
       - build/ios/ipa/*.ipa
       - build/ios/xcarchive/*.xcarchive
@@ -217,6 +232,7 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
-        # Optional: set changelog from last commit
-        # changelog: "$CM_COMMIT_MESSAGE"
+        beta_groups: ["Testers"]
+        # Auto-generate changelog from last commit
+        changelog: "Build $CM_BUILD_NUMBER: $CM_COMMIT_MESSAGE"
 
