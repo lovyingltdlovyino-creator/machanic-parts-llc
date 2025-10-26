@@ -233,6 +233,4 @@ workflows:
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         beta_groups: ["Testers"]
-        # Auto-generate changelog from last commit
-        changelog: "Build $CM_BUILD_NUMBER: $CM_COMMIT_MESSAGE"
 
