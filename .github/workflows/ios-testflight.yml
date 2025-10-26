@@ -139,17 +139,22 @@ jobs:
           fi
           PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$DECODED_PLIST" 2>/dev/null || echo "")
           PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$DECODED_PLIST" 2>/dev/null || echo "")
+          TEAM_IDENTIFIER=$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$DECODED_PLIST" 2>/dev/null || echo "")
+          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$DECODED_PLIST" 2>/dev/null || echo "")
           if [ -z "$PROFILE_NAME" ]; then
             echo "ERROR: Could not parse profile Name from $DECODED_PLIST" >&2
             head -n 60 "$DECODED_PLIST" || true
             exit 1
           fi
           echo "Using profile: $PROFILE_NAME ($PROFILE_PATH)"
+          echo "Profile TeamIdentifier: $TEAM_IDENTIFIER"
+          echo "Profile application-identifier: $APP_ID"
           echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
           if [ -n "$PROFILE_UUID" ]; then echo "PROFILE_UUID=$PROFILE_UUID" >> "$GITHUB_ENV"; fi
 
       - name: Xcode archive (Manual signing)
         run: |
+          set -o pipefail
           xcodebuild \
             -workspace "$WORKSPACE" \
             -scheme "$SCHEME" \
@@ -164,7 +169,14 @@ jobs:
             PROVISIONING_PROFILE="$PROFILE_UUID" \
             OTHER_CODE_SIGN_FLAGS="--keychain,$KEYCHAIN_PATH" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            archive
+            archive | tee build/ios/archive.log
+
+      - name: Upload archive log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-archive-log
+          path: build/ios/archive.log
 
       - name: Export IPA (App Store)
         run: |
@@ -175,6 +187,7 @@ jobs:
           <dict>
             <key>method</key><string>app-store</string>
             <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
