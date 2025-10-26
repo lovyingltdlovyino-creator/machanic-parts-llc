@@ -130,7 +130,7 @@ jobs:
       - name: Show signing build settings
         run: |
           xcodebuild -workspace "$WORKSPACE" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -showBuildSettings \
-          | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PROVISIONING_PROFILE_SUPPORTED|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM|\s*CODE_SIGN_ENTITLEMENTS)"
+          | egrep -i "^(\s*CODE_SIGN|\s*PROVISIONING_PROFILE|\s*PROVISIONING_PROFILE_SUPPORTED|\s*PRODUCT_BUNDLE_IDENTIFIER|\s*DEVELOPMENT_TEAM|\s*CODE_SIGN_ENTITLEMENTS|\s*AUTOMATIC)"
 
       - name: Debug certificate and profile
         run: |
@@ -171,14 +171,10 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/ios/Runner.xcarchive \
             -resultBundlePath build/ios/ArchiveResult.xcresult \
-            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_STYLE=Automatic \
             DEVELOPMENT_TEAM=$TEAM_ID \
             PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID \
-            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
-            PROVISIONING_PROFILE="$PROFILE_UUID" \
-            PROVISIONING_PROFILE_SUPPORTED=YES \
             OTHER_CODE_SIGN_FLAGS="--keychain,$KEYCHAIN_PATH" \
-            CODE_SIGN_IDENTITY="Apple Distribution: LOVE OKPO OMENOGOR (75U4C4C87J)" \
             archive | tee build/ios/archive.log
 
       - name: Upload archive log on failure
@@ -212,12 +208,7 @@ jobs:
           <dict>
             <key>method</key><string>app-store</string>
             <key>teamID</key><string>$TEAM_ID</string>
-            <key>signingCertificate</key><string>Apple Distribution: LOVE OKPO OMENOGOR (75U4C4C87J)</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>$BUNDLE_ID</key><string>$PROFILE_NAME</string>
-            </dict>
+            <key>signingStyle</key><string>automatic</string>
             <key>stripSwiftSymbols</key><true/>
             <key>compileBitcode</key><false/>
           </dict>
