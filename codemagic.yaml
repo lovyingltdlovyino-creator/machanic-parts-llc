@@ -136,6 +136,19 @@ workflows:
           MATCH_NAME=""
           MATCH_UUID=""
           MATCH_TYPE=""
+          echo "Ensuring provisioning profiles are installed in $PROFILE_DIR"
+          if ! ls "$PROFILE_DIR"/*.mobileprovision 1>/dev/null 2>&1; then
+            echo "No profiles found locally, trying to install from Code signing..."
+            xcode-project use-profiles || true
+            ls -al "$PROFILE_DIR" || true
+          fi
+          if ! ls "$PROFILE_DIR"/*.mobileprovision 1>/dev/null 2>&1; then
+            if [ -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ] && [ -n "${APP_STORE_CONNECT_KEY_IDENTIFIER:-}" ] && [ -n "${APP_STORE_CONNECT_PRIVATE_KEY:-}" ]; then
+              echo "Attempting to fetch signing files from App Store Connect..."
+              app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || true
+              xcode-project use-profiles || true
+            fi
+          fi
           # Prefer App Store profiles: no ProvisionedDevices and get-task-allow=false
           for p in "$PROFILE_DIR"/*.mobileprovision; do
             [ -f "$p" ] || continue
@@ -218,7 +231,7 @@ workflows:
           # Archive with manual signing using UUID
           ARCHIVE_PATH="$PWD/build/ios/xcarchive/Runner.xcarchive"
           mkdir -p "$(dirname "$ARCHIVE_PATH")" build/ios/ipa
-          XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=$PROFILE_UUID PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID CODE_SIGN_IDENTITY=Apple\\ Distribution CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES"
+          XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=$PROFILE_UUID PROVISIONING_PROFILE_SPECIFIER=\"$PROFILE_SPECIFIER\" PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID CODE_SIGN_IDENTITY=Apple\\ Distribution CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES"
           if [ -n "${APPLE_TEAM_ID:-}" ]; then XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
           echo "Archiving with: $XCARGS"
           xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -allowProvisioningUpdates -archivePath "$ARCHIVE_PATH" archive $XCARGS
