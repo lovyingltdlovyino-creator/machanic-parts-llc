@@ -196,8 +196,14 @@ workflows:
             cp "$PODS_PROJ" "${PODS_PROJ}.bak"
             sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = "";/g' "$PODS_PROJ"
             sed -i '' 's/PROVISIONING_PROFILE = [^;]*;/PROVISIONING_PROFILE = "";/g' "$PODS_PROJ"
-            sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' "$PODS_PROJ"
+            sed -i '' 's/CODE_SIGN_STYLE = [^;]*;/CODE_SIGN_STYLE = Manual;/g' "$PODS_PROJ"
+            sed -i '' 's/CODE_SIGNING_ALLOWED = YES;/CODE_SIGNING_ALLOWED = NO;/g' "$PODS_PROJ"
+            sed -i '' 's/CODE_SIGNING_REQUIRED = YES;/CODE_SIGNING_REQUIRED = NO;/g' "$PODS_PROJ"
+            sed -i '' 's/"CODE_SIGNING_ALLOWED\[sdk=iphoneos\*\]" = YES;/"CODE_SIGNING_ALLOWED[sdk=iphoneos*]" = NO;/g' "$PODS_PROJ"
+            sed -i '' 's/"CODE_SIGNING_REQUIRED\[sdk=iphoneos\*\]" = YES;/"CODE_SIGNING_REQUIRED[sdk=iphoneos*]" = NO;/g' "$PODS_PROJ"
+            sed -i '' 's/CODE_SIGN_IDENTITY = [^;]*;/CODE_SIGN_IDENTITY = "";/g' "$PODS_PROJ"
             sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = [^;]*;/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";/g' "$PODS_PROJ"
+            sed -i '' 's/DEVELOPMENT_TEAM = [^;]*;/DEVELOPMENT_TEAM = "";/g' "$PODS_PROJ"
           else
             echo "No Pods project found at $PODS_PROJ (skipping)"
           fi
@@ -251,8 +257,6 @@ workflows:
           # as it would propagate to Pod targets which don't support profiles.
           ARGS=(
             "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-            CODE_SIGNING_REQUIRED=YES
-            CODE_SIGNING_ALLOWED=YES
           )
           if [ -n "${APPLE_TEAM_ID:-}" ]; then ARGS+=("DEVELOPMENT_TEAM=$APPLE_TEAM_ID"); fi
           echo "Archiving with: ${ARGS[*]}"
