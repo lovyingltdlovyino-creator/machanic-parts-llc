@@ -210,7 +210,7 @@ workflows:
             '<plist version="1.0">' \
             '<dict>' \
             '  <key>method</key>' \
-            '  <string>app-store-connect</string>' \
+            '  <string>app-store</string>' \
             '  <key>teamID</key>' \
             "  <string>${APPLE_TEAM_ID}</string>" \
             '  <key>signingStyle</key>' \
@@ -231,10 +231,19 @@ workflows:
           # Archive with manual signing using UUID
           ARCHIVE_PATH="$PWD/build/ios/xcarchive/Runner.xcarchive"
           mkdir -p "$(dirname "$ARCHIVE_PATH")" build/ios/ipa
-          XCARGS="CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE=$PROFILE_UUID PROVISIONING_PROFILE_SPECIFIER=\"$PROFILE_SPECIFIER\" PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID CODE_SIGN_IDENTITY=Apple\\ Distribution CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES"
-          if [ -n "${APPLE_TEAM_ID:-}" ]; then XCARGS="$XCARGS DEVELOPMENT_TEAM=$APPLE_TEAM_ID"; fi
-          echo "Archiving with: $XCARGS"
-          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -allowProvisioningUpdates -archivePath "$ARCHIVE_PATH" archive $XCARGS
+          # Build argument array to avoid quoting issues
+          ARGS=(
+            CODE_SIGN_STYLE=Manual
+            "PROVISIONING_PROFILE=$PROFILE_UUID"
+            "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_SPECIFIER"
+            "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+            "CODE_SIGN_IDENTITY=Apple Distribution"
+            CODE_SIGNING_REQUIRED=YES
+            CODE_SIGNING_ALLOWED=YES
+          )
+          if [ -n "${APPLE_TEAM_ID:-}" ]; then ARGS+=("DEVELOPMENT_TEAM=$APPLE_TEAM_ID"); fi
+          echo "Archiving with: ${ARGS[*]}"
+          xcodebuild -workspace "$XCODE_WORKSPACE" -scheme "$XCODE_SCHEME" -configuration Release -sdk iphoneos -destination "generic/platform=iOS" -allowProvisioningUpdates -archivePath "$ARCHIVE_PATH" archive "${ARGS[@]}"
           echo "Inspecting archive signing metadata..."
           /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:Team" "$ARCHIVE_PATH/Info.plist" 2>/dev/null || echo "Team: <none>"
           /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:SigningIdentity" "$ARCHIVE_PATH/Info.plist" 2>/dev/null || echo "SigningIdentity: <none>"
