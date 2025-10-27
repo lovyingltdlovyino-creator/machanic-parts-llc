@@ -186,6 +186,22 @@ workflows:
             echo "PROFILE_NAME=$PROFILE_NAME" >> "$CM_ENV"
             echo "PROFILE_SPECIFIER=$PROFILE_SPECIFIER" >> "$CM_ENV"
           fi
+      - name: Sanitize Pods signing (clear profiles for pods targets)
+        script: |
+          set -e
+          echo "Clearing provisioning profile settings for Pod targets..."
+          pushd ios >/dev/null
+          PODS_PROJ="Pods/Pods.xcodeproj/project.pbxproj"
+          if [ -f "$PODS_PROJ" ]; then
+            cp "$PODS_PROJ" "${PODS_PROJ}.bak"
+            sed -i '' 's/PROVISIONING_PROFILE_SPECIFIER = [^;]*;/PROVISIONING_PROFILE_SPECIFIER = "";/g' "$PODS_PROJ"
+            sed -i '' 's/PROVISIONING_PROFILE = [^;]*;/PROVISIONING_PROFILE = "";/g' "$PODS_PROJ"
+            sed -i '' 's/CODE_SIGN_STYLE = Manual;/CODE_SIGN_STYLE = Automatic;/g' "$PODS_PROJ"
+            sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = [^;]*;/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";/g' "$PODS_PROJ"
+          else
+            echo "No Pods project found at $PODS_PROJ (skipping)"
+          fi
+          popd >/dev/null
       - name: Show Xcode signing build settings
         script: |
           set -e
@@ -231,13 +247,10 @@ workflows:
           # Archive with manual signing using UUID
           ARCHIVE_PATH="$PWD/build/ios/xcarchive/Runner.xcarchive"
           mkdir -p "$(dirname "$ARCHIVE_PATH")" build/ios/ipa
-          # Build argument array to avoid quoting issues
+          # Build argument array to avoid quoting issues. Do NOT set provisioning profile or identity globally,
+          # as it would propagate to Pod targets which don't support profiles.
           ARGS=(
-            CODE_SIGN_STYLE=Manual
-            "PROVISIONING_PROFILE=$PROFILE_UUID"
-            "PROVISIONING_PROFILE_SPECIFIER=$PROFILE_SPECIFIER"
             "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
-            "CODE_SIGN_IDENTITY=Apple Distribution"
             CODE_SIGNING_REQUIRED=YES
             CODE_SIGNING_ALLOWED=YES
           )
