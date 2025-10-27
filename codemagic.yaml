@@ -119,12 +119,21 @@ workflows:
             echo "Ensure either Code signing certificates are added in Codemagic UI or IOS_CERTIFICATE_P12/IOS_CERTIFICATE_PASSWORD env vars are set."
             exit 1
           fi
+      - name: Set iOS build number
+        script: |
+          set -e
+          # Use a strictly numeric build number to satisfy iOS (CFBundleVersion must be numeric)
+          BN="$(date +%s)"
+          echo "Using iOS build number: $BN"
+          export IOS_BUILD_NUMBER="$BN"
+          if [ -n "${CM_ENV:-}" ]; then echo "IOS_BUILD_NUMBER=$IOS_BUILD_NUMBER" >> "$CM_ENV"; fi
       - name: Flutter build ios (no codesign)
         script: |
           # Make sure Podfile has correct deployment target
           sed -i '' "s/platform :ios, '.*'/platform :ios, '$IOS_DEPLOYMENT_TARGET'/g" ios/Podfile
           flutter clean
           flutter build ios --release --no-codesign \
+            --build-number "$IOS_BUILD_NUMBER" \
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
@@ -272,6 +281,7 @@ workflows:
           # as it would propagate to Pod targets which don't support profiles.
           ARGS=(
             "PRODUCT_BUNDLE_IDENTIFIER=$BUNDLE_ID"
+            "CURRENT_PROJECT_VERSION=$IOS_BUILD_NUMBER"
           )
           if [ -n "${APPLE_TEAM_ID:-}" ]; then ARGS+=("DEVELOPMENT_TEAM=$APPLE_TEAM_ID"); fi
           echo "Archiving with: ${ARGS[*]}"
