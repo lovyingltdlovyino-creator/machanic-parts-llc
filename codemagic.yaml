@@ -77,11 +77,20 @@ workflows:
             if security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
               echo "Apple Distribution identity already present in keychain; skipping env P12 import to avoid mismatch"
             else
-              echo "Decoding IOS_CERTIFICATE_P12 from env"
+              echo "Decoding IOS_CERTIFICATE_P12 from env (length: $(echo -n "$IOS_CERTIFICATE_P12" | wc -c))"
               printf %s "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_TMP"
               echo "Importing certificate into $KEYCHAIN_PATH"
-              security import "$CERT_TMP" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 || true
+              if ! security import "$CERT_TMP" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12; then
+                echo "ERROR: Failed to import P12. Check IOS_CERTIFICATE_PASSWORD and that the value is a valid Distribution .p12."
+                exit 1
+              fi
               rm -f "$CERT_TMP"
+              echo "Post-import identities:"
+              security find-identity -v -p codesigning || true
+              if ! security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
+                echo "ERROR: No 'Apple Distribution' identity found after P12 import. Ensure the P12 contains the Distribution certificate with private key."
+                exit 1
+              fi
             fi
           fi
           if [ -n "${IOS_PROVISIONING_PROFILE:-}" ]; then
