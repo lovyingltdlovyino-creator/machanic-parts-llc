@@ -59,7 +59,7 @@ workflows:
         script: |
           set -e
           keychain initialize
-          KEYCHAIN_PATH=$(security default-keychain | tr -d '"')
+          KEYCHAIN_PATH=$(security default-keychain | tr -d '"' | xargs)
           echo "Default keychain is: $KEYCHAIN_PATH"
           echo "Fetching signing files from App Store Connect for $BUNDLE_ID (IOS_APP_STORE)..."
           app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || echo "WARN: fetch-signing-files failed"
@@ -72,24 +72,22 @@ workflows:
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
           # Use Codemagic's initialized default keychain
-          KEYCHAIN_PATH=$(security default-keychain | tr -d '"')
+          KEYCHAIN_PATH=$(security default-keychain | tr -d '"' | xargs)
           if [ -n "${IOS_CERTIFICATE_P12:-}" ] && [ -n "${IOS_CERTIFICATE_PASSWORD:-}" ]; then
             if security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
               echo "Apple Distribution identity already present in keychain; skipping env P12 import to avoid mismatch"
             else
               echo "Decoding IOS_CERTIFICATE_P12 from env (length: $(echo -n "$IOS_CERTIFICATE_P12" | wc -c))"
               printf %s "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_TMP"
-              echo "Importing certificate into $KEYCHAIN_PATH"
-              if ! security import "$CERT_TMP" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12; then
-                echo "ERROR: Failed to import P12. Check IOS_CERTIFICATE_PASSWORD and that the value is a valid Distribution .p12."
-                exit 1
+              echo "Importing certificate into default keychain"
+              if ! security import "$CERT_TMP" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12; then
+                echo "WARN: Failed to import P12. Will continue — relying on Codemagic-managed certificates."
               fi
               rm -f "$CERT_TMP"
               echo "Post-import identities:"
               security find-identity -v -p codesigning || true
               if ! security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
-                echo "ERROR: No 'Apple Distribution' identity found after P12 import. Ensure the P12 contains the Distribution certificate with private key."
-                exit 1
+                echo "WARN: No 'Apple Distribution' identity found after P12 import; continuing to next checks."
               fi
             fi
           fi
@@ -103,7 +101,7 @@ workflows:
           security find-identity -v -p codesigning || true
           echo "-- Provisioning profiles --"
           ls -al "$HOME/Library/MobileDevice/Provisioning Profiles" || true
-          KEYCHAIN_PATH=$(security default-keychain | tr -d '"')
+          KEYCHAIN_PATH=$(security default-keychain | tr -d '"' | xargs)
           echo "Using keychain: $KEYCHAIN_PATH"
           if [ -n "${IOS_CERTIFICATE_P12:-}" ]; then
             echo "IOS_CERTIFICATE_P12 is set (length: $(echo -n "$IOS_CERTIFICATE_P12" | wc -c))"
