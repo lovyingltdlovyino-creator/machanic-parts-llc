@@ -71,23 +71,18 @@ workflows:
           CERT_TMP="$HOME/certificate.p12"
           PROFILE_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILE_DIR"
-          # Create and use a dedicated keychain for CI
-          KEYCHAIN_PATH="$HOME/Library/Keychains/manual.keychain-db"
-          KEYCHAIN_PASSWORD="${CM_KEYCHAIN_PASSWORD:-codemagic}"
-          echo "Creating and unlocking manual keychain at: $KEYCHAIN_PATH"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" || true
-          security set-keychain-settings -lut 3600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -s "$KEYCHAIN_PATH"
-          security default-keychain -s "$KEYCHAIN_PATH"
+          # Use Codemagic's initialized default keychain
+          KEYCHAIN_PATH=$(security default-keychain | tr -d '"')
           if [ -n "${IOS_CERTIFICATE_P12:-}" ] && [ -n "${IOS_CERTIFICATE_PASSWORD:-}" ]; then
-            echo "Decoding IOS_CERTIFICATE_P12 from env"
-            printf %s "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_TMP"
-            echo "Importing certificate into $KEYCHAIN_PATH"
-            security import "$CERT_TMP" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12
-            # Allow codesign to access the key without interactive prompts
-            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-            rm -f "$CERT_TMP"
+            if security find-identity -v -p codesigning | grep -q "Apple Distribution"; then
+              echo "Apple Distribution identity already present in keychain; skipping env P12 import to avoid mismatch"
+            else
+              echo "Decoding IOS_CERTIFICATE_P12 from env"
+              printf %s "$IOS_CERTIFICATE_P12" | base64 --decode > "$CERT_TMP"
+              echo "Importing certificate into $KEYCHAIN_PATH"
+              security import "$CERT_TMP" -k "$KEYCHAIN_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 || true
+              rm -f "$CERT_TMP"
+            fi
           fi
           if [ -n "${IOS_PROVISIONING_PROFILE:-}" ]; then
             echo "Decoding IOS_PROVISIONING_PROFILE from env"
@@ -149,6 +144,19 @@ workflows:
               xcode-project use-profiles || true
             fi
           fi
+          # If an env-provided profile exists, prefer it explicitly
+          if [ -f "$PROFILE_DIR/Manual.mobileprovision" ]; then
+            echo "Found env-provided profile at $PROFILE_DIR/Manual.mobileprovision; preferring it"
+            INFO=$(security cms -D -i "$PROFILE_DIR/Manual.mobileprovision" 2>/dev/null || true)
+            MATCH_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            MATCH_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin <<< "$INFO" 2>/dev/null || true)
+            GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' /dev/stdin <<< "$INFO" 2>/dev/null || echo "")
+            HAS_DEVICES=$(/usr/libexec/PlistBuddy -c 'Print :ProvisionedDevices' /dev/stdin <<< "$INFO" 2>/dev/null && echo yes || echo no)
+            MATCH_TYPE="development"
+            if [ "$HAS_DEVICES" = "no" ] && [ "${GET_TASK_ALLOW}" = "false" ]; then
+              MATCH_TYPE="app-store"
+            fi
+          fi
           # Prefer App Store profiles: no ProvisionedDevices and get-task-allow=false
           for p in "$PROFILE_DIR"/*.mobileprovision; do
             [ -f "$p" ] || continue
@@ -163,6 +171,8 @@ workflows:
               PROFILE_TYPE="app-store"
             fi
             if [ -n "$APP_ID" ] && [[ "$APP_ID" == "${APPLE_TEAM_ID:-}.$BUNDLE_ID" || "$APP_ID" == *".$BUNDLE_ID" ]]; then
+              # If env-provided profile already chosen, skip selecting a different one
+              if [ -n "$MATCH_UUID" ]; then continue; fi
               # Select the first app-store profile; otherwise remember a fallback
               if [ "$PROFILE_TYPE" = "app-store" ]; then
                 MATCH_NAME="$NAME"; MATCH_UUID="$UUID"; MATCH_TYPE="$PROFILE_TYPE";
@@ -232,13 +242,11 @@ workflows:
             '<plist version="1.0">' \
             '<dict>' \
             '  <key>method</key>' \
-            '  <string>app-store</string>' \
+            '  <string>app-store-connect</string>' \
             '  <key>teamID</key>' \
             "  <string>${APPLE_TEAM_ID}</string>" \
             '  <key>signingStyle</key>' \
             '  <string>manual</string>' \
-            '  <key>signingCertificate</key>' \
-            '  <string>Apple Distribution</string>' \
             '  <key>provisioningProfiles</key>' \
             '  <dict>' \
             "    <key>$BUNDLE_ID</key>" \
