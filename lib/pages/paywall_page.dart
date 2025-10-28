@@ -53,19 +53,33 @@ class _PaywallPageState extends State<PaywallPage> {
     setState(() { _loading = true; _error = null; });
     try {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
-        setState(() { _error = 'RevenueCat purchases are iOS-only in this build.'; });
+        setState(() { 
+          _error = 'RevenueCat purchases are iOS-only in this build.';
+          _loading = false;
+        });
         return;
       }
       final offerings = await RevenueCatService.instance.getOfferings();
       final customer = await RevenueCatService.instance.getCustomerInfo();
+      
+      if (offerings == null) {
+        setState(() {
+          _error = 'RevenueCat is not initialized. Please restart the app.';
+          _loading = false;
+        });
+        return;
+      }
+      
       setState(() {
         _offerings = offerings;
         _customerInfo = customer;
+        _loading = false;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to load offerings: $e'; });
-    } finally {
-      setState(() { _loading = false; });
+      setState(() { 
+        _error = 'Failed to load offerings: $e';
+        _loading = false;
+      });
     }
   }
 
@@ -104,14 +118,24 @@ class _PaywallPageState extends State<PaywallPage> {
     final activeEntitlements = _customerInfo?.entitlements.active.keys.toList() ?? const [];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upgrade Plan')),
+      appBar: AppBar(
+        title: const Text('Upgrade Plan'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Padding(
               padding: const EdgeInsets.all(16),
               child: ListView(
                 children: [
-                  if (_error != null)
+                  if (_error != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -119,8 +143,21 @@ class _PaywallPageState extends State<PaywallPage> {
                         border: Border.all(color: Colors.red.shade200),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_error!, style: const TextStyle(color: Colors.red)),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            onPressed: _load,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                  ],
                   const Text('Choose a plan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
                   if (_offerings?.current == null || (_offerings?.current?.availablePackages.isEmpty ?? true)) ...[

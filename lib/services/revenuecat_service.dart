@@ -38,11 +38,13 @@ class RevenueCatService {
   }
 
   Future<Offerings?> getOfferings() async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+      throw Exception('RevenueCat not initialized or not supported on this platform');
+    }
     try {
       return await Purchases.getOfferings();
-    } catch (_) {
-      return null;
+    } catch (e) {
+      throw Exception('Failed to get offerings: $e');
     }
   }
 
