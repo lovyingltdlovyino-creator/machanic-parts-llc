@@ -54,5 +54,8 @@
 		<string>This app may save images related to your listings.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>This app needs camera access if you choose to take photos for your listings.</string>
+		<!-- Export Compliance: Set to false if app only uses standard encryption (HTTPS, TLS) -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
 	</dict>
 </plist>

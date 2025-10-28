@@ -2,7 +2,7 @@ name: mechanic_part
 description: "Car and spare parts marketplace app"
 publish_to: 'none'
 
-version: 1.1.0+2
+version: 1.2.0+1
 
 environment:
   sdk: ^3.5.4
