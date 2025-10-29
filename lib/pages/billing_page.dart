@@ -103,6 +103,15 @@ class _BillingPageState extends State<BillingPage> {
   @override
   void initState() {
     super.initState();
+    // On iOS, redirect directly to RevenueCat paywall
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.go('/paywall');
+        }
+      });
+      return;
+    }
     _loadCurrentPlan();
     _loadLivePrices();
     // Handle Stripe/Portal return params from hash fragment

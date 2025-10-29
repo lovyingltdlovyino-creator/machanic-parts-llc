@@ -64,7 +64,7 @@ class _PaywallPageState extends State<PaywallPage> {
       
       if (offerings == null) {
         setState(() {
-          _error = 'RevenueCat is not initialized. Please restart the app.';
+          _error = 'Unable to load subscription plans. Please restart the app.';
           _loading = false;
         });
         return;
@@ -76,8 +76,18 @@ class _PaywallPageState extends State<PaywallPage> {
         _loading = false;
       });
     } catch (e) {
+      // Simplify RevenueCat configuration errors for better user experience
+      String errorMsg = 'Unable to load subscription plans at this time.';
+      final errStr = e.toString().toLowerCase();
+      
+      if (errStr.contains('configuration') || errStr.contains('products') || errStr.contains('dashboard')) {
+        errorMsg = 'Subscription plans are being set up. Please try again in a few minutes or contact support.';
+      } else if (errStr.contains('network') || errStr.contains('connection')) {
+        errorMsg = 'Network error. Please check your internet connection and try again.';
+      }
+      
       setState(() { 
-        _error = 'Failed to load offerings: $e';
+        _error = errorMsg;
         _loading = false;
       });
     }

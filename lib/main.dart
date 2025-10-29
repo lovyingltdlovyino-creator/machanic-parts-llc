@@ -5217,13 +5217,27 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             OutlinedButton.icon(
-                              onPressed: () => context.go('/billing'),
+                              onPressed: () {
+                                // On iOS, go directly to RevenueCat paywall
+                                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+                                  context.go('/paywall');
+                                } else {
+                                  context.go('/billing');
+                                }
+                              },
                               icon: const Icon(Icons.manage_accounts),
                               label: const Text('Manage'),
                             ),
                             const SizedBox(width: 8),
                             ElevatedButton.icon(
-                              onPressed: () => context.go('/billing'),
+                              onPressed: () {
+                                // On iOS, go directly to RevenueCat paywall
+                                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
+                                  context.go('/paywall');
+                                } else {
+                                  context.go('/billing');
+                                }
+                              },
                               icon: const Icon(Icons.upgrade),
                               label: Text(planId == 'free' ? 'Upgrade' : 'Change Plan'),
                               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
@@ -7185,7 +7199,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '\$${widget.listing['price']?.toString() ?? '0'}',
+                    '\$${widget.listing['price_usd']?.toString() ?? '0'}',
                     style: GoogleFonts.poppins(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
