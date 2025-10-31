@@ -35,12 +35,12 @@ class Footer extends StatelessWidget {
                       spacing: 12,
                       runSpacing: 8,
                       children: [
-                        TextButton(onPressed: () => context.push('/about'), child: const Text('About Us')),
-                        TextButton(onPressed: () => context.push('/contact'), child: const Text('Contact Us')),
-                        TextButton(onPressed: () => context.push('/privacy'), child: const Text('Privacy Policy')),
-                        TextButton(onPressed: () => context.push('/terms'), child: const Text('Terms of Service')),
+                        TextButton(onPressed: () => context.go('/about'), child: const Text('About Us')),
+                        TextButton(onPressed: () => context.go('/contact'), child: const Text('Contact Us')),
+                        TextButton(onPressed: () => context.go('/privacy'), child: const Text('Privacy Policy')),
+                        TextButton(onPressed: () => context.go('/terms'), child: const Text('Terms of Service')),
                         ElevatedButton(
-                          onPressed: () => context.push('/auth'),
+                          onPressed: () => context.go('/auth'),
                           child: const Text('Become a Seller'),
                         ),
                       ],
