@@ -90,7 +90,7 @@ class ContactPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'We're here to help and answer any questions you might have',
+                        "We're here to help and answer any questions you might have",
                         style: GoogleFonts.poppins(
                           color: Colors.white.withOpacity(0.95),
                           fontSize: isMobile ? 16 : 20,
