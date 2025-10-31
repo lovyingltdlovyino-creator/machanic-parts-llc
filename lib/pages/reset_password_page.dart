@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html show window;
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -14,6 +16,33 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   bool _loading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForErrors();
+  }
+
+  void _checkForErrors() {
+    if (kIsWeb) {
+      final url = Uri.base;
+      final error = url.queryParameters['error'];
+      final errorDescription = url.queryParameters['error_description'];
+      
+      if (error != null) {
+        setState(() {
+          if (error == 'access_denied' && errorDescription?.contains('expired') == true) {
+            _errorMessage = 'This password reset link has expired. Please request a new one.';
+          } else if (errorDescription != null) {
+            _errorMessage = errorDescription.replaceAll('+', ' ');
+          } else {
+            _errorMessage = 'Invalid or expired link. Please request a new password reset.';
+          }
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -67,57 +96,105 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           constraints: const BoxConstraints(maxWidth: 460),
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Enter your new password',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'New password',
-                      prefixIcon: Icon(Icons.lock_outline),
+            child: _errorMessage != null
+                ? _buildErrorView()
+                : Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'Enter your new password',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordCtrl,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'New password',
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Please enter a password';
+                            if (v.length < 6) return 'Password must be at least 6 characters';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _confirmCtrl,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Confirm new password',
+                            prefixIcon: Icon(Icons.lock_outline),
+                          ),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) return 'Please confirm your password';
+                            if (v != _passwordCtrl.text) return 'Passwords do not match';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loading ? null : _updatePassword,
+                          child: _loading
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Text('Update Password'),
+                        ),
+                      ],
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Please enter a password';
-                      if (v.length < 6) return 'Password must be at least 6 characters';
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _confirmCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Confirm new password',
-                      prefixIcon: Icon(Icons.lock_outline),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Please confirm your password';
-                      if (v != _passwordCtrl.text) return 'Passwords do not match';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loading ? null : _updatePassword,
-                    child: _loading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Update Password'),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Icon(
+          Icons.error_outline,
+          size: 64,
+          color: Colors.red.shade400,
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Link Expired',
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          _errorMessage ?? 'This password reset link is no longer valid.',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey.shade700,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        ElevatedButton.icon(
+          onPressed: () => context.go('/auth'),
+          icon: const Icon(Icons.refresh),
+          label: const Text('Request New Link'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: () => context.go('/home'),
+          child: const Text('Back to Home'),
+        ),
+      ],
     );
   }
 }

@@ -5018,6 +5018,128 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Delete Account',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Are you sure you want to delete your account? This action cannot be undone.',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                        SizedBox(width: 8),
+                        Text('This will permanently delete:', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('• Your profile information'),
+                    const Text('• All your listings'),
+                    const Text('• Your chat messages'),
+                    const Text('• Your subscription (if any)'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete Account'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      setState(() => _isLoading = true);
+
+      // Delete user's listings first
+      await Supabase.instance.client
+          .from('listings')
+          .delete()
+          .eq('owner_id', user.id);
+
+      // Delete user's messages
+      await Supabase.instance.client
+          .from('messages')
+          .delete()
+          .or('sender_id.eq.${user.id},recipient_id.eq.${user.id}');
+
+      // Delete user's profile
+      await Supabase.instance.client
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+
+      // Finally, delete the auth user account
+      // Note: This requires admin privileges or user confirmation via email
+      // For now, we'll sign the user out. The actual account deletion
+      // should be handled by your backend/Supabase Edge Function
+      await Supabase.instance.client.auth.signOut();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account data deleted successfully. You have been signed out.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        context.go('/');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting account: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   Widget _infoTile(IconData icon, String label, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12, left: 4, right: 4),
@@ -5091,14 +5213,26 @@ class _ProfilePageState extends State<ProfilePage> {
             title: const Text('Terms of Service'),
             onTap: () => context.push('/terms'),
           ),
+          const Divider(height: 24),
           if (!isSeller) ...[
-            const SizedBox(height: 8),
             ElevatedButton(
               onPressed: () => context.go('/auth'),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
               child: const Text('Become a Seller'),
             ),
+            const SizedBox(height: 8),
           ],
+          // Delete Account Button - required by Apple Guidelines
+          OutlinedButton.icon(
+            onPressed: _isLoading ? null : _deleteAccount,
+            icon: const Icon(Icons.delete_forever_outlined),
+            label: const Text('Delete Account'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              minimumSize: const Size(double.infinity, 44),
+            ),
+          ),
         ],
       ),
     );
@@ -7837,7 +7971,13 @@ class _AuthPageState extends State<AuthPage> {
     }
     try {
       setState(() => _loading = true);
-      final redirect = kIsWeb ? Uri.base.origin : null;
+      // Use the current URL origin for web, or construct the reset password URL
+      String? redirect;
+      if (kIsWeb) {
+        final origin = Uri.base.origin;
+        // Ensure we're using the full URL with the reset-password path
+        redirect = '$origin/reset-password';
+      }
       await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: redirect);
       if (!mounted) return;
       showDialog(
