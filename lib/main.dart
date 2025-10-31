@@ -9,6 +9,7 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
 import 'widgets/footer.dart';
@@ -54,6 +55,11 @@ class ErrorScreen extends StatelessWidget {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Enable clean URLs without hash for web only (doesn't affect iOS/Android)
+  if (kIsWeb) {
+    usePathUrlStrategy();
+  }
 
   // Capture all uncaught Flutter and zone errors, show a friendly screen on web
   FlutterError.onError = (FlutterErrorDetails details) {
