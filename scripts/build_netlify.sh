@@ -20,6 +20,8 @@ SUPABASE_URL="${SUPABASE_URL:-}"
 SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-}"
 
 flutter build web --release \
+  --web-renderer html \
+  --tree-shake-icons \
   --dart-define "SUPABASE_URL=$SUPABASE_URL" \
   --dart-define "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"
 
