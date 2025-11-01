@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html show window;
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
