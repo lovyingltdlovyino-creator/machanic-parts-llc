@@ -364,6 +364,7 @@ workflows:
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY" \
+            --dart-define SKIP_NOTIFICATIONS=true \
             -d "$(xcrun simctl list devices booted | grep iPad | awk -F'[()]' '{print $(NF-1)}')" || echo "Tests completed"
       - name: Alternative - Manual screenshots via simctl
         script: |
@@ -371,7 +372,8 @@ workflows:
           flutter build ios --simulator \
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
+            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY" \
+            --dart-define SKIP_NOTIFICATIONS=true
           
           APP_PATH=$(find build/ios/iphonesimulator -name "Runner.app" | head -n 1)
           xcrun simctl install booted "$APP_PATH"

@@ -163,12 +163,18 @@ Future<void> main() async {
     });
   } catch (_) {}
   
-  // Initialize notification service
-  // ignore: avoid_print
-  print('[Init] Init NotificationService');
-  await NotificationService().initialize();
-  // ignore: avoid_print
-  print('[Init] NotificationService initialized');
+  // Initialize notification service (skip during screenshot builds)
+  const skipNotifications = String.fromEnvironment('SKIP_NOTIFICATIONS', defaultValue: 'false');
+  if (skipNotifications != 'true') {
+    // ignore: avoid_print
+    print('[Init] Init NotificationService');
+    await NotificationService().initialize();
+    // ignore: avoid_print
+    print('[Init] NotificationService initialized');
+  } else {
+    // ignore: avoid_print
+    print('[Init] Skipping NotificationService for screenshot build');
+  }
 
   // Initialize RevenueCat (strictly iOS only)
   // ignore: avoid_print
