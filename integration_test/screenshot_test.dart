@@ -10,47 +10,82 @@ void main() {
   group('iPad Screenshots', () {
     testWidgets('Navigate and capture screenshots', (WidgetTester tester) async {
       app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 8));
+      await tester.pumpAndSettle(const Duration(seconds: 10));
+
+      print('=== APP LOADED ===');
+      
+      // Try to login first if on login page
+      try {
+        final emailField = find.byType(TextField).first;
+        if (emailField.evaluate().isNotEmpty) {
+          print('Found login page, attempting login...');
+          await tester.enterText(emailField, 'folabiyistar@gmail.com');
+          await tester.pumpAndSettle(const Duration(seconds: 1));
+          
+          final passwordField = find.byType(TextField).at(1);
+          await tester.enterText(passwordField, 'Test123');
+          await tester.pumpAndSettle(const Duration(seconds: 1));
+          
+          // Find and tap login button
+          final loginBtn = find.text('Login').last;
+          await tester.tap(loginBtn);
+          await tester.pumpAndSettle(const Duration(seconds: 5));
+          print('Login attempted, waiting for home page...');
+        }
+      } catch (e) {
+        print('No login needed or login failed: $e');
+      }
 
       // Screenshot 1: Home/Landing page
+      print('Taking screenshot 1: Home');
       await binding.convertFlutterSurfaceToImage();
       await tester.pumpAndSettle();
       await takeScreenshot(binding, '01_home_landing');
       await tester.pumpAndSettle(const Duration(seconds: 2));
 
-      // Try to navigate to categories by tapping "View More"
+      // Screenshot 2: Scroll down to show more content
+      print('Taking screenshot 2: Home scrolled');
       try {
-        final viewMore = find.text('View More');
-        if (viewMore.evaluate().isNotEmpty) {
-          await tester.tap(viewMore.first);
-          await tester.pumpAndSettle(const Duration(seconds: 3));
+        await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+        await tester.pumpAndSettle(const Duration(seconds: 2));
+        
+        await binding.convertFlutterSurfaceToImage();
+        await tester.pumpAndSettle();
+        await takeScreenshot(binding, '02_home_scrolled');
+      } catch (e) {
+        print('Could not scroll: $e');
+        await takeScreenshot(binding, '02_home_alternate');
+      }
+
+      // Screenshot 3: Tap first product to see details
+      print('Taking screenshot 3: Product detail');
+      try {
+        final firstProduct = find.text('Toyota Camry');
+        if (firstProduct.evaluate().isNotEmpty) {
+          await tester.tap(firstProduct.first);
+          await tester.pumpAndSettle(const Duration(seconds: 4));
           
           await binding.convertFlutterSurfaceToImage();
           await tester.pumpAndSettle();
-          await takeScreenshot(binding, '02_categories_view');
-          await tester.pumpAndSettle(const Duration(seconds: 2));
-        }
-      } catch (e) {
-        print('Could not tap View More: $e');
-      }
-
-      // Try to tap first category icon
-      try {
-        final categoryIcon = find.byType(CircleAvatar).first;
-        if (categoryIcon.evaluate().isNotEmpty) {
-          await tester.tap(categoryIcon);
-          await tester.pumpAndSettle(const Duration(seconds: 3));
+          await takeScreenshot(binding, '03_product_detail');
           
-          await binding.convertFlutterSurfaceToImage();
-          await tester.pumpAndSettle();
-          await takeScreenshot(binding, '03_category_parts');
-          await tester.pumpAndSettle(const Duration(seconds: 2));
+          // Go back
+          final backBtn = find.byType(BackButton);
+          if (backBtn.evaluate().isNotEmpty) {
+            await tester.tap(backBtn.first);
+            await tester.pumpAndSettle(const Duration(seconds: 2));
+          }
+        } else {
+          print('Product not found, using alternate');
+          await takeScreenshot(binding, '03_alternate');
         }
       } catch (e) {
-        print('Could not tap category: $e');
+        print('Could not navigate to product: $e');
+        await takeScreenshot(binding, '03_error');
       }
 
-      // Try to tap browse button at bottom
+      // Screenshot 4: Browse tab
+      print('Taking screenshot 4: Browse');
       try {
         final browseBtn = find.text('Browse');
         if (browseBtn.evaluate().isNotEmpty) {
@@ -59,14 +94,18 @@ void main() {
           
           await binding.convertFlutterSurfaceToImage();
           await tester.pumpAndSettle();
-          await takeScreenshot(binding, '04_browse_view');
-          await tester.pumpAndSettle(const Duration(seconds: 2));
+          await takeScreenshot(binding, '04_browse_tab');
+        } else {
+          print('Browse button not found');
+          await takeScreenshot(binding, '04_alternate');
         }
       } catch (e) {
-        print('Could not tap Browse: $e');
+        print('Could not navigate to Browse: $e');
+        await takeScreenshot(binding, '04_error');
       }
 
-      // Try to navigate to profile
+      // Screenshot 5: Profile tab
+      print('Taking screenshot 5: Profile');
       try {
         final profileBtn = find.text('Profile');
         if (profileBtn.evaluate().isNotEmpty) {
@@ -75,11 +114,17 @@ void main() {
           
           await binding.convertFlutterSurfaceToImage();
           await tester.pumpAndSettle();
-          await takeScreenshot(binding, '05_profile_page');
+          await takeScreenshot(binding, '05_profile_tab');
+        } else {
+          print('Profile button not found');
+          await takeScreenshot(binding, '05_alternate');
         }
       } catch (e) {
-        print('Could not tap Profile: $e');
+        print('Could not navigate to Profile: $e');
+        await takeScreenshot(binding, '05_error');
       }
+      
+      print('=== ALL SCREENSHOTS COMPLETED ===');
     });
   });
 }
