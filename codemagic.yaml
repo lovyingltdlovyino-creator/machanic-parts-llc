@@ -314,3 +314,67 @@ workflows:
         submit_to_testflight: true
         beta_groups: ["Testers"]
 
+  ipad_screenshots:
+    name: iPad Screenshot Simulator
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      groups:
+        - supabase_env
+        - revenuecat_env
+      vars:
+        BUNDLE_ID: com.mechanicpart.mechanicPart
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'screenshots-*'
+          include: true
+    scripts:
+      - name: Install dependencies
+        script: flutter pub get
+      - name: Create .env
+        script: |
+          {
+            [ -n "${SUPABASE_URL:-}" ] && echo "SUPABASE_URL=${SUPABASE_URL}";
+            [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
+            [ -n "${REVENUECAT_IOS_PUBLIC_SDK_KEY:-}" ] && echo "REVENUECAT_IOS_PUBLIC_SDK_KEY=${REVENUECAT_IOS_PUBLIC_SDK_KEY}";
+          } > .env
+      - name: List available simulators
+        script: xcrun simctl list devices available
+      - name: Boot iPad Pro 12.9" simulator
+        script: |
+          DEVICE_ID=$(xcrun simctl list devices available | grep "iPad Pro (12.9-inch) (6th generation)" | head -n 1 | grep -o '[A-F0-9-]\{36\}')
+          if [ -z "$DEVICE_ID" ]; then
+            echo "Trying 2nd gen iPad Pro..."
+            DEVICE_ID=$(xcrun simctl list devices available | grep "iPad Pro (12.9-inch) (2nd generation)" | head -n 1 | grep -o '[A-F0-9-]\{36\}')
+          fi
+          echo "Booting iPad simulator: $DEVICE_ID"
+          xcrun simctl boot "$DEVICE_ID" 2>/dev/null || echo "Already booted"
+          open -a Simulator
+          sleep 10
+      - name: Build and install app on simulator
+        script: |
+          flutter build ios --release \
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
+          xcrun simctl install booted build/ios/iphoneos/Runner.app
+          xcrun simctl launch booted com.mechanicpart.mechanicPart
+      - name: Keep simulator running for manual screenshots
+        script: |
+          echo "========================================="
+          echo "Simulator is now running!"
+          echo "========================================="
+          echo ""
+          echo "To take screenshots:"
+          echo "1. Use Codemagic VNC viewer to access the simulator"
+          echo "2. Navigate through your app"
+          echo "3. Use CMD+S or 'xcrun simctl io booted screenshot' to capture"
+          echo ""
+          echo "Or run locally: xcrun simctl io booted screenshot ~/Desktop/screenshot.png"
+          echo ""
+          echo "Keeping simulator alive for 10 minutes..."
+          sleep 600

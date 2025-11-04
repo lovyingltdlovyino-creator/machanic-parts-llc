@@ -48,3 +48,7 @@ app.*.map.json
 .env
 .env.*
 android/key.properties
+
+# Screenshot generation
+screenshots/
+staging/
