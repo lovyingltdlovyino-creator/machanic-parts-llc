@@ -139,7 +139,8 @@ workflows:
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
       - name: Configure Xcode project with provisioning profiles
         script: |
-          xcode-project use-profiles
+          echo "Skipping xcode-project use-profiles to avoid export conflicts"
+          echo "We'll use manual export options with UUID instead"
       - name: Resolve provisioning profile UUID (force)
         script: |
           set -e
