@@ -377,20 +377,39 @@ workflows:
           xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted com.mechanicpart.mechanicPart
           
-          echo "App launched. Taking screenshots in 5 seconds..."
-          sleep 5
+          echo "App launched. Waiting for splash screen and permissions..."
+          sleep 8
+          
+          # Dismiss notification permission dialog by tapping "Allow" button
+          echo "Attempting to dismiss permission dialogs..."
+          xcrun simctl ui booted tap 400 555 || echo "No dialog to dismiss"
+          
+          echo "Waiting for app to fully load (15 seconds)..."
+          sleep 15
           
           mkdir -p screenshots
-          xcrun simctl io booted screenshot screenshots/home_screen.png
-          echo "Screenshot 1 saved: home_screen.png"
+          echo "Taking screenshot 1: Main screen"
+          xcrun simctl io booted screenshot screenshots/01_main_screen.png
           
-          sleep 3
-          xcrun simctl io booted screenshot screenshots/app_view_2.png
-          echo "Screenshot 2 saved: app_view_2.png"
+          echo "Waiting 8 seconds..."
+          sleep 8
+          echo "Taking screenshot 2: Second view"
+          xcrun simctl io booted screenshot screenshots/02_second_view.png
           
-          sleep 3
-          xcrun simctl io booted screenshot screenshots/app_view_3.png
-          echo "Screenshot 3 saved: app_view_3.png"
+          echo "Waiting 8 seconds..."
+          sleep 8
+          echo "Taking screenshot 3: Third view"
+          xcrun simctl io booted screenshot screenshots/03_third_view.png
+          
+          echo "Waiting 8 seconds..."
+          sleep 8
+          echo "Taking screenshot 4: Fourth view"
+          xcrun simctl io booted screenshot screenshots/04_fourth_view.png
+          
+          echo "Waiting 8 seconds..."
+          sleep 8
+          echo "Taking screenshot 5: Fifth view"
+          xcrun simctl io booted screenshot screenshots/05_fifth_view.png
           
           echo "Screenshots completed!"
           ls -lh screenshots/
