@@ -379,39 +379,40 @@ workflows:
           xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted com.mechanicpart.mechanicPart
           
-          echo "App launched. Waiting for splash screen and permissions..."
-          sleep 8
-          
-          # Dismiss notification permission dialog by tapping "Allow" button
-          echo "Attempting to dismiss permission dialogs..."
-          xcrun simctl ui booted tap 400 555 || echo "No dialog to dismiss"
-          
-          echo "Waiting for app to fully load (15 seconds)..."
-          sleep 15
+          echo "App launched. Waiting for app to load..."
+          sleep 10
           
           mkdir -p screenshots
-          echo "Taking screenshot 1: Main screen"
-          xcrun simctl io booted screenshot screenshots/01_main_screen.png
+          echo "Screenshot 1: Landing/Home page"
+          xcrun simctl io booted screenshot screenshots/01_home_landing.png
           
-          echo "Waiting 8 seconds..."
-          sleep 8
-          echo "Taking screenshot 2: Second view"
-          xcrun simctl io booted screenshot screenshots/02_second_view.png
+          # Navigate to Browse/Categories (tap "View More" or first category)
+          echo "Tap: View More / Categories area (top right)"
+          xcrun simctl ui booted tap 719 197 || echo "Tap failed"
+          sleep 3
+          echo "Screenshot 2: Categories/Browse view"
+          xcrun simctl io booted screenshot screenshots/02_categories_browse.png
           
-          echo "Waiting 8 seconds..."
-          sleep 8
-          echo "Taking screenshot 3: Third view"
-          xcrun simctl io booted screenshot screenshots/03_third_view.png
+          # Tap on a category (e.g., Vehicles & Cars - first icon)
+          echo "Tap: Vehicles & Cars category"
+          xcrun simctl ui booted tap 41 247 || echo "Tap failed"
+          sleep 3
+          echo "Screenshot 3: Parts listing"
+          xcrun simctl io booted screenshot screenshots/03_parts_listing.png
           
-          echo "Waiting 8 seconds..."
-          sleep 8
-          echo "Taking screenshot 4: Fourth view"
-          xcrun simctl io booted screenshot screenshots/04_fourth_view.png
+          # Tap on first part/product in the promoted section
+          echo "Tap: First promoted product"
+          xcrun simctl ui booted tap 190 600 || echo "Tap failed"
+          sleep 3
+          echo "Screenshot 4: Product detail"
+          xcrun simctl io booted screenshot screenshots/04_product_detail.png
           
-          echo "Waiting 8 seconds..."
-          sleep 8
-          echo "Taking screenshot 5: Fifth view"
-          xcrun simctl io booted screenshot screenshots/05_fifth_view.png
+          # Go back and navigate to Profile (bottom right icon)
+          echo "Tap: Profile icon (bottom right)"
+          xcrun simctl ui booted tap 639 849 || echo "Tap failed"
+          sleep 3
+          echo "Screenshot 5: Profile/Account"
+          xcrun simctl io booted screenshot screenshots/05_profile_account.png
           
           echo "Screenshots completed!"
           ls -lh screenshots/
