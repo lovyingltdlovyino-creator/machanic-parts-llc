@@ -318,7 +318,7 @@ workflows:
         beta_groups: ["Testers"]
 
   ipad_screenshots:
-    name: iPad Screenshot Simulator
+    name: iPad Screenshots (Personal Plan)
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
@@ -345,39 +345,55 @@ workflows:
             [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
             [ -n "${REVENUECAT_IOS_PUBLIC_SDK_KEY:-}" ] && echo "REVENUECAT_IOS_PUBLIC_SDK_KEY=${REVENUECAT_IOS_PUBLIC_SDK_KEY}";
           } > .env
-      - name: List available simulators
-        script: xcrun simctl list devices available
       - name: Boot iPad Pro 12.9" simulator
         script: |
           DEVICE_ID=$(xcrun simctl list devices available | grep "iPad Pro (12.9-inch) (6th generation)" | head -n 1 | grep -o '[A-F0-9-]\{36\}')
           if [ -z "$DEVICE_ID" ]; then
-            echo "Trying 2nd gen iPad Pro..."
-            DEVICE_ID=$(xcrun simctl list devices available | grep "iPad Pro (12.9-inch) (2nd generation)" | head -n 1 | grep -o '[A-F0-9-]\{36\}')
+            echo "Creating iPad Pro 12.9\" (6th gen) simulator..."
+            DEVICE_TYPE=$(xcrun simctl list devicetypes | grep "iPad Pro (12.9-inch) (6th generation)" | awk -F'[()]' '{print $(NF-1)}')
+            RUNTIME=$(xcrun simctl list runtimes | grep "iOS" | tail -n 1 | awk '{print $NF}')
+            DEVICE_ID=$(xcrun simctl create "iPad Pro Test" "$DEVICE_TYPE" "$RUNTIME")
           fi
-          echo "Booting iPad simulator: $DEVICE_ID"
+          echo "Using device: $DEVICE_ID"
           xcrun simctl boot "$DEVICE_ID" 2>/dev/null || echo "Already booted"
-          open -a Simulator
-          sleep 10
-      - name: Build and install app on simulator
+          sleep 5
+      - name: Run integration tests and capture screenshots
         script: |
-          flutter build ios --release \
+          mkdir -p screenshots
+          flutter test integration_test/screenshot_test.dart \
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY" \
+            -d "$(xcrun simctl list devices booted | grep iPad | awk -F'[()]' '{print $(NF-1)}')" || echo "Tests completed"
+      - name: Alternative - Manual screenshots via simctl
+        script: |
+          echo "Building and installing app..."
+          flutter build ios --simulator \
             --dart-define SUPABASE_URL="$SUPABASE_URL" \
             --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
             --dart-define REVENUECAT_IOS_PUBLIC_SDK_KEY="$REVENUECAT_IOS_PUBLIC_SDK_KEY"
-          xcrun simctl install booted build/ios/iphoneos/Runner.app
+          
+          APP_PATH=$(find build/ios/iphonesimulator -name "Runner.app" | head -n 1)
+          xcrun simctl install booted "$APP_PATH"
           xcrun simctl launch booted com.mechanicpart.mechanicPart
-      - name: Keep simulator running for manual screenshots
-        script: |
-          echo "========================================="
-          echo "Simulator is now running!"
-          echo "========================================="
-          echo ""
-          echo "To take screenshots:"
-          echo "1. Use Codemagic VNC viewer to access the simulator"
-          echo "2. Navigate through your app"
-          echo "3. Use CMD+S or 'xcrun simctl io booted screenshot' to capture"
-          echo ""
-          echo "Or run locally: xcrun simctl io booted screenshot ~/Desktop/screenshot.png"
-          echo ""
-          echo "Keeping simulator alive for 10 minutes..."
-          sleep 600
+          
+          echo "App launched. Taking screenshots in 5 seconds..."
+          sleep 5
+          
+          mkdir -p screenshots
+          xcrun simctl io booted screenshot screenshots/home_screen.png
+          echo "Screenshot 1 saved: home_screen.png"
+          
+          sleep 3
+          xcrun simctl io booted screenshot screenshots/app_view_2.png
+          echo "Screenshot 2 saved: app_view_2.png"
+          
+          sleep 3
+          xcrun simctl io booted screenshot screenshots/app_view_3.png
+          echo "Screenshot 3 saved: app_view_3.png"
+          
+          echo "Screenshots completed!"
+          ls -lh screenshots/
+    artifacts:
+      - screenshots/**/*.png
+      - build/integration_test_screenshots/**/*.png
