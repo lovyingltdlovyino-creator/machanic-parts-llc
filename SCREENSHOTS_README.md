@@ -1,38 +1,34 @@
 # iPad Screenshot Generation for App Store
 
-This project is configured to automatically generate iPad screenshots for App Store submission using Codemagic.
+This project is configured to automatically generate iPad screenshots for App Store submission using Codemagic **Personal Plan** (no VNC access required).
 
 ## 📱 What Gets Generated
 
 - iPad Pro 12.9" (6th generation) screenshots - 2048 x 2732px
-- iPad Pro 12.9" (2nd generation) screenshots - 2048 x 2732px
-- Screenshots from key app screens:
-  - Home screen
-  - Parts listing
-  - Search
-  - About page
-  - Contact page
+- Automatically captured screenshots from your app
+- Multiple views captured at timed intervals
 
 ## 🚀 How to Generate Screenshots
 
-### Option 1: Via Codemagic (Automated - Recommended)
+### Via Codemagic Personal Plan (Automated - No VNC Needed)
 
-1. **Create a new branch** called `screenshots`:
+1. **Create and push a tag to trigger the workflow:**
    ```bash
-   git checkout -b screenshots
-   git push origin screenshots
+   git tag screenshots-v1
+   git push origin screenshots-v1
    ```
 
 2. **Codemagic will automatically**:
-   - Boot iPad Pro simulators
-   - Run your app
-   - Navigate through screens
-   - Capture screenshots
+   - Boot iPad Pro 12.9" simulator
+   - Build and install your app
+   - Launch the app on the simulator
+   - Capture screenshots at timed intervals (3 screenshots automatically)
    - Save them as build artifacts
 
 3. **Download screenshots**:
    - Go to Codemagic → Your Build → **Artifacts** tab
-   - Download the `.png` files
+   - Download the `.png` files from the `screenshots/` folder
+   - Screenshots are already sized correctly: **2048 x 2732px**
 
 ### Option 2: Local Generation (Manual)
 
