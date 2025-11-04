@@ -8,54 +8,77 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('iPad Screenshots', () {
-    testWidgets('Capture home screen', (WidgetTester tester) async {
+    testWidgets('Navigate and capture screenshots', (WidgetTester tester) async {
       app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+      await tester.pumpAndSettle(const Duration(seconds: 8));
 
-      // Take screenshot
+      // Screenshot 1: Home/Landing page
       await binding.convertFlutterSurfaceToImage();
       await tester.pumpAndSettle();
-      
-      // Save with timestamp to avoid conflicts
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      await takeScreenshot(binding, 'home_screen_$timestamp');
-      
+      await takeScreenshot(binding, '01_home_landing');
       await tester.pumpAndSettle(const Duration(seconds: 2));
-    });
 
-    testWidgets('Capture about page', (WidgetTester tester) async {
-      app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 5));
-
-      // Try to find and tap About Us
-      final aboutFinder = find.text('About Us');
-      if (aboutFinder.evaluate().isNotEmpty) {
-        await tester.tap(aboutFinder.first);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
-        
-        await binding.convertFlutterSurfaceToImage();
-        await tester.pumpAndSettle();
-        
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        await takeScreenshot(binding, 'about_screen_$timestamp');
+      // Try to navigate to categories by tapping "View More"
+      try {
+        final viewMore = find.text('View More');
+        if (viewMore.evaluate().isNotEmpty) {
+          await tester.tap(viewMore.first);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          
+          await binding.convertFlutterSurfaceToImage();
+          await tester.pumpAndSettle();
+          await takeScreenshot(binding, '02_categories_view');
+          await tester.pumpAndSettle(const Duration(seconds: 2));
+        }
+      } catch (e) {
+        print('Could not tap View More: $e');
       }
-    });
 
-    testWidgets('Capture contact page', (WidgetTester tester) async {
-      app.main();
-      await tester.pumpAndSettle(const Duration(seconds: 5));
+      // Try to tap first category icon
+      try {
+        final categoryIcon = find.byType(CircleAvatar).first;
+        if (categoryIcon.evaluate().isNotEmpty) {
+          await tester.tap(categoryIcon);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          
+          await binding.convertFlutterSurfaceToImage();
+          await tester.pumpAndSettle();
+          await takeScreenshot(binding, '03_category_parts');
+          await tester.pumpAndSettle(const Duration(seconds: 2));
+        }
+      } catch (e) {
+        print('Could not tap category: $e');
+      }
 
-      // Try to find and tap Contact Us
-      final contactFinder = find.text('Contact Us');
-      if (contactFinder.evaluate().isNotEmpty) {
-        await tester.tap(contactFinder.first);
-        await tester.pumpAndSettle(const Duration(seconds: 3));
-        
-        await binding.convertFlutterSurfaceToImage();
-        await tester.pumpAndSettle();
-        
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        await takeScreenshot(binding, 'contact_screen_$timestamp');
+      // Try to tap browse button at bottom
+      try {
+        final browseBtn = find.text('Browse');
+        if (browseBtn.evaluate().isNotEmpty) {
+          await tester.tap(browseBtn);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          
+          await binding.convertFlutterSurfaceToImage();
+          await tester.pumpAndSettle();
+          await takeScreenshot(binding, '04_browse_view');
+          await tester.pumpAndSettle(const Duration(seconds: 2));
+        }
+      } catch (e) {
+        print('Could not tap Browse: $e');
+      }
+
+      // Try to navigate to profile
+      try {
+        final profileBtn = find.text('Profile');
+        if (profileBtn.evaluate().isNotEmpty) {
+          await tester.tap(profileBtn);
+          await tester.pumpAndSettle(const Duration(seconds: 3));
+          
+          await binding.convertFlutterSurfaceToImage();
+          await tester.pumpAndSettle();
+          await takeScreenshot(binding, '05_profile_page');
+        }
+      } catch (e) {
+        print('Could not tap Profile: $e');
       }
     });
   });
@@ -70,7 +93,6 @@ Future<void> takeScreenshot(
     screenshotsDir.createSync(recursive: true);
   }
 
-  // Take screenshot
   await binding.takeScreenshot(name);
   print('Screenshot saved: $name');
 }
