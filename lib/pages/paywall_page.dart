@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../services/revenuecat_service.dart';
+import 'iap_diagnostic_page.dart';
 
 class PaywallPage extends StatefulWidget {
   const PaywallPage({super.key});
@@ -214,6 +215,20 @@ class _PaywallPageState extends State<PaywallPage> {
             Navigator.of(context).pop();
           },
         ),
+        actions: [
+          if (kDebugMode || (_error != null))
+            IconButton(
+              icon: const Icon(Icons.bug_report),
+              tooltip: 'Run Diagnostics',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const IAPDiagnosticPage(),
+                  ),
+                );
+              },
+            ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -234,10 +249,34 @@ class _PaywallPageState extends State<PaywallPage> {
                         children: [
                           Text(_error!, style: const TextStyle(color: Colors.red)),
                           const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: _load,
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('Retry'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const IAPDiagnosticPage(),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.bug_report),
+                                  label: const Text('Diagnose'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.blue,
+                                    side: const BorderSide(color: Colors.blue),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
