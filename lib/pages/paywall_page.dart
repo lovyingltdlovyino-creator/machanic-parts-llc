@@ -59,10 +59,17 @@ class _PaywallPageState extends State<PaywallPage> {
         });
         return;
       }
-      final offerings = await RevenueCatService.instance.getOfferings();
-      final customer = await RevenueCatService.instance.getCustomerInfo();
       
-      if (offerings == null) {
+      // Log attempt
+      debugPrint('[PaywallPage] Fetching offerings...');
+      final offerings = await RevenueCatService.instance.getOfferings();
+      debugPrint('[PaywallPage] Offerings fetched: ${offerings?.current?.identifier}');
+      
+      final customer = await RevenueCatService.instance.getCustomerInfo();
+      debugPrint('[PaywallPage] Customer info fetched');
+      
+      if (offerings == null || offerings.current == null) {
+        debugPrint('[PaywallPage] No current offering available');
         setState(() {
           _error = 'Unable to load subscription plans. Please restart the app.';
           _loading = false;
@@ -70,12 +77,18 @@ class _PaywallPageState extends State<PaywallPage> {
         return;
       }
       
+      debugPrint('[PaywallPage] Available packages: ${offerings.current!.availablePackages.length}');
+      
       setState(() {
         _offerings = offerings;
         _customerInfo = customer;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, stack) {
+      // Detailed error logging
+      debugPrint('[PaywallPage] Error loading offerings: $e');
+      debugPrint('[PaywallPage] Stack trace: $stack');
+      
       // Simplify RevenueCat configuration errors for better user experience
       String errorMsg = 'Unable to load subscription plans at this time.';
       final errStr = e.toString().toLowerCase();
@@ -84,6 +97,8 @@ class _PaywallPageState extends State<PaywallPage> {
         errorMsg = 'Subscription plans are being set up. Please try again in a few minutes or contact support.';
       } else if (errStr.contains('network') || errStr.contains('connection')) {
         errorMsg = 'Network error. Please check your internet connection and try again.';
+      } else if (errStr.contains('not initialized')) {
+        errorMsg = 'App is initializing. Please try again in a moment.';
       }
       
       setState(() { 
@@ -109,15 +124,76 @@ class _PaywallPageState extends State<PaywallPage> {
   }
 
   Future<void> _restore() async {
+    // Show dialog explaining what will happen
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore Purchases'),
+        content: const Text(
+          'This will restore any previous purchases you made with your Apple ID. You may be asked to sign in.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    
+    if (shouldContinue != true) return;
+    
     setState(() { _loading = true; _error = null; });
     try {
+      debugPrint('[PaywallPage] Starting restore purchases...');
       final info = await RevenueCatService.instance.restorePurchases();
+      debugPrint('[PaywallPage] Restore complete. Active entitlements: ${info.entitlements.active.keys}');
+      
       setState(() { _customerInfo = info; });
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restored purchases')));
+        if (info.entitlements.active.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No previous purchases found.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Restored ${info.entitlements.active.length} subscription(s)!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
-      setState(() { _error = 'Restore failed: $e'; });
+      debugPrint('[PaywallPage] Restore failed: $e');
+      
+      String errorMsg = 'Restore failed. Please try again.';
+      final errStr = e.toString().toLowerCase();
+      
+      if (errStr.contains('cancelled') || errStr.contains('cancel')) {
+        errorMsg = 'Restore cancelled.';
+      } else if (errStr.contains('network')) {
+        errorMsg = 'Network error. Please check your connection and try again.';
+      }
+      
+      setState(() { _error = errorMsg; });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() { _loading = false; });
     }
@@ -133,9 +209,9 @@ class _PaywallPageState extends State<PaywallPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
+            debugPrint('[PaywallPage] Back button pressed');
+            // Try to pop, if it fails, nothing happens (we're at root)
+            Navigator.of(context).pop();
           },
         ),
       ),
