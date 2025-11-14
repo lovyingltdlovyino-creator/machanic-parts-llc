@@ -16,10 +16,22 @@ class RevenueCatService {
     if (defaultTargetPlatform != TargetPlatform.iOS) return;
     if (iosPublicSdkKey.isEmpty) return;
 
-    await Purchases.setLogLevel(LogLevel.warn);
-    final configuration = PurchasesConfiguration(iosPublicSdkKey);
-    await Purchases.configure(configuration);
-    _initialized = true;
+    try {
+      // Set log level to debug for better troubleshooting
+      await Purchases.setLogLevel(LogLevel.debug);
+      
+      // Configure RevenueCat
+      final configuration = PurchasesConfiguration(iosPublicSdkKey);
+      await Purchases.configure(configuration);
+      
+      _initialized = true;
+      
+      // Log success
+      debugPrint('[RevenueCat] Successfully initialized');
+    } catch (e) {
+      debugPrint('[RevenueCat] Initialization failed: $e');
+      rethrow;
+    }
   }
 
   Future<void> identify(String appUserId) async {
@@ -42,8 +54,26 @@ class RevenueCatService {
       throw Exception('RevenueCat not initialized or not supported on this platform');
     }
     try {
-      return await Purchases.getOfferings();
+      debugPrint('[RevenueCat] Fetching offerings...');
+      final offerings = await Purchases.getOfferings();
+      
+      if (offerings?.current == null) {
+        debugPrint('[RevenueCat] No current offering found. Please configure offerings in RevenueCat dashboard.');
+        return offerings;
+      }
+      
+      final packageCount = offerings?.current?.availablePackages.length ?? 0;
+      debugPrint('[RevenueCat] Current offering has $packageCount packages');
+      
+      // Log each package for debugging
+      offerings?.current?.availablePackages.forEach((pkg) {
+        final product = pkg.storeProduct;
+        debugPrint('[RevenueCat] Package: ${pkg.identifier}, Product: ${product.identifier}');
+      });
+      
+      return offerings;
     } catch (e) {
+      debugPrint('[RevenueCat] Failed to get offerings: $e');
       throw Exception('Failed to get offerings: $e');
     }
   }
