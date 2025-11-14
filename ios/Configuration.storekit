@@ -1,0 +1,506 @@
+{
+  "identifier" : "B4C5C3E0",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6753659721",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 755364000.0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21799057",
+      "localizations" : [
+
+      ],
+      "name" : "Basic Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6736001001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "1 month basic subscription",
+              "displayName" : "1 month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "basic_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "1 month",
+          "subscriptionGroupID" : "21799057",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "12.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6736001002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "3 months basic subscription",
+              "displayName" : "3 months",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "basic_quarterly",
+          "recurringSubscriptionPeriod" : "P3M",
+          "referenceName" : "3 months",
+          "subscriptionGroupID" : "21799057",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6736001003",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "6 months basic subscription",
+              "displayName" : "6 months",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "basic_6month",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "6 months",
+          "subscriptionGroupID" : "21799057",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6736001004",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "12 months basic subscription",
+              "displayName" : "12 months",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "basic_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "12 months",
+          "subscriptionGroupID" : "21799057",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    },
+    {
+      "id" : "21799058",
+      "localizations" : [
+
+      ],
+      "name" : "Premium Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6736001005",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Premium monthly subscription",
+              "displayName" : "Premium Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "premium_monthly1",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "21799058",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6736001006",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Premium 6 month subscription",
+              "displayName" : "Premium 6-Month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "premium_6month1",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "Premium 6-Month",
+          "subscriptionGroupID" : "21799058",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6736001007",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Premium quarterly subscription",
+              "displayName" : "Premium Quarterly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "premium_quarterly1",
+          "recurringSubscriptionPeriod" : "P3M",
+          "referenceName" : "Premium Quarterly",
+          "subscriptionGroupID" : "21799058",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "99.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6736001008",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Premium yearly subscription",
+              "displayName" : "Premium Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "premium_yearly1",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Premium Yearly",
+          "subscriptionGroupID" : "21799058",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    },
+    {
+      "id" : "21799059",
+      "localizations" : [
+
+      ],
+      "name" : "VIP Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "14.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6736001009",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP monthly subscription",
+              "displayName" : "VIP Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vip_monthly1",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "VIP Monthly",
+          "subscriptionGroupID" : "21799059",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6736001010",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP quarterly subscription",
+              "displayName" : "VIP Quarterly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vip_quarterly1",
+          "recurringSubscriptionPeriod" : "P3M",
+          "referenceName" : "VIP Quarterly",
+          "subscriptionGroupID" : "21799059",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "74.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6736001011",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP 6 month subscription",
+              "displayName" : "VIP 6-Month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vip_6month1",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "VIP 6-Month",
+          "subscriptionGroupID" : "21799059",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "139.99",
+          "familyShareable" : false,
+          "groupNumber" : 3,
+          "internalID" : "6736001012",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP yearly subscription",
+              "displayName" : "VIP Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vip_yearly1",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "VIP Yearly",
+          "subscriptionGroupID" : "21799059",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    },
+    {
+      "id" : "21799060",
+      "localizations" : [
+
+      ],
+      "name" : "VIP Gold Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6736001013",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP Gold monthly subscription",
+              "displayName" : "VIP Gold Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vipgold_monthly1",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "VIP Gold Monthly",
+          "subscriptionGroupID" : "21799060",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "54.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6736001014",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP Gold quarterly subscription",
+              "displayName" : "VIP Gold Quarterly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vipgold_quarterly1",
+          "recurringSubscriptionPeriod" : "P3M",
+          "referenceName" : "VIP Gold Quarterly",
+          "subscriptionGroupID" : "21799060",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "99.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6736001015",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP Gold 6 month subscription",
+              "displayName" : "VIP Gold 6-Month",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vipgold_6month1",
+          "recurringSubscriptionPeriod" : "P6M",
+          "referenceName" : "VIP Gold 6-Month",
+          "subscriptionGroupID" : "21799060",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "189.99",
+          "familyShareable" : false,
+          "groupNumber" : 4,
+          "internalID" : "6736001016",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "VIP Gold yearly subscription",
+              "displayName" : "VIP Gold Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "vipgold_yearly1",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "VIP Gold Yearly",
+          "subscriptionGroupID" : "21799060",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
