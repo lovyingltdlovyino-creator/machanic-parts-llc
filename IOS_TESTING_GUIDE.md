@@ -1,264 +1,245 @@
-# 🧪 iOS Testing on Codemagic
+# 🎯 iOS App Preview on Codemagic (Stellar)
 
 ## Overview
 
-The `ios_tests` workflow runs automated integration tests on an iPad Pro simulator. This helps verify:
-- ✅ App builds correctly
-- ✅ Integration tests pass
-- ✅ RevenueCat IAP configuration is valid
-- ✅ Screenshots can be generated
-- ✅ No critical errors in the app
+The `ios_app_preview` workflow builds your iOS app for simulator and enables **Stellar App Preview** - a browser-based iOS simulator where you can manually test your app. This is perfect for:
+- ✅ Testing IAP (In-App Purchases) in a real environment
+- ✅ Verifying UI/UX without downloading anything
+- ✅ Sharing demo with team members
+- ✅ Quick manual testing before App Store submission
+- ✅ No need for physical device or local Xcode
 
-## 🚀 How to Run Tests
+## 🚀 How to Launch App Preview
 
-### Method 1: Automatically on Pull Requests
+### Method 1: Manually Trigger Build (Recommended)
 
-Tests run automatically when you create a pull request:
+1. **Go to Codemagic**: https://codemagic.io/apps
+2. **Select your app**: Mechanic Part LLC
+3. **Click**: "Start new build" button (top right)
+4. **Select workflow**: "iOS App Preview"
+5. **Select branch**: `main`
+6. **Click**: "Start new build"
+7. **Wait ~8-10 minutes** for build to complete
 
-```bash
-# Create a feature branch
-git checkout -b test-iap-fix
+### Method 2: Automatic on Push/PR
 
-# Make changes
-git add .
-git commit -m "Test IAP configuration"
-git push origin test-iap-fix
+The workflow triggers automatically when you:
+- Push to any branch
+- Create a pull request
 
-# Create PR on GitHub
-# Tests will run automatically
-```
+### After Build Completes
 
-### Method 2: Manually Trigger from Codemagic UI
+Once the build finishes successfully:
 
-1. Go to https://codemagic.io/apps
-2. Select your app: **Mechanic Part LLC**
-3. Click **Start new build**
-4. Select workflow: **iOS Integration Tests**
-5. Select branch: `main` (or any branch)
-6. Click **Start new build**
+1. **Go to the build page** in Codemagic
+2. **Scroll to "Artifacts"** section at the bottom
+3. **Find**: `Runner.app` artifact
+4. **Click**: **"Quick Launch"** button next to it 🚀
+5. **App launches** in your browser with iOS simulator!
 
-### Method 3: Push a Test Tag
+![Quick Launch Button Example](https://docs.codemagic.io/uploads/2023/07/quick-launch.png)
 
-Trigger tests by pushing a tag:
+## 🎮 Using the App Preview Simulator
 
-```bash
-git tag test-ios-v1
-git push origin test-ios-v1
-```
+### Controls
 
-Then manually select the `ios_tests` workflow in Codemagic UI.
+Once the simulator loads in your browser:
+- **Tap**: Click anywhere on the screen
+- **Scroll**: Use mouse wheel or drag
+- **Change Device**: Click ⋮ menu → "Change device"
+- **Rotate**: Device rotation button
+- **Screenshot**: Take screenshots of current screen
+- **Stop Session**: End preview (saves minutes)
 
-## 📊 What Gets Tested
+### Testing IAPs in App Preview
 
-### 1. **Flutter Unit Tests**
-Runs all unit tests in the `test/` directory.
+**Perfect for verifying your IAP fix!**
 
-### 2. **Integration Tests**
-Runs `integration_test/screenshot_test.dart`:
-- Boots iPad Pro simulator
-- Launches app with test configuration
-- Attempts to login (if needed)
-- Takes screenshots of different screens
-- Validates navigation works
+1. **Launch the app** (wait for it to load)
+2. **Login** with your test account: `folabiyistar@gmail.com`
+3. **Navigate** to Profile → **Upgrade Plan**
+4. **Verify**: All 16 subscription plans load correctly
+5. **Check**: Prices display properly
+6. **Test**: Try selecting different tiers (Basic, Premium, VIP, VIP Gold)
 
-### 3. **IAP Configuration Test**
-Builds the app for simulator to verify:
-- RevenueCat SDK initializes correctly
-- StoreKit configuration is valid
-- No compilation errors in IAP code
+### Session Limits
 
-## 🔍 Viewing Test Results
+- **Duration**: Max 20 minutes per session
+- **Concurrent**: 1 session at a time
+- **Cost**: $0.095/min after 100 free trial minutes (Pay-as-you-go plan)
+
+## 🔍 Viewing Build Results
 
 ### In Codemagic UI
 
 1. Go to **Builds** in Codemagic
-2. Click on the build
+2. Click on your build
 3. View each step:
-   - ✅ Green = Passed
+   - ✅ Green = Success
    - ❌ Red = Failed
-   - ⚠️ Yellow = Warning
+   - ⏳ Blue = Running
 
 ### Check Logs
 
 Click on any step to see detailed logs:
-- **Run Integration Tests** - See test output and errors
-- **Test IAP Configuration** - See RevenueCat initialization logs
-- **Boot iOS Simulator** - Verify simulator setup
+- **Install dependencies** - Flutter pub get output
+- **Create .env file** - Environment variables setup
+- **Build iOS app for simulator** - Main build process with RevenueCat initialization
 
-### Download Artifacts
+### Find the Quick Launch Button
 
-After build completes, download:
-- **Screenshots** - From integration tests
-- **flutter_drive.log** - Detailed test logs
+After successful build:
+1. **Scroll down** to "Artifacts" section
+2. Look for **`Runner.app`**
+3. **"Quick Launch"** button will appear next to it
 
 ## 🐛 Common Issues
 
-### Issue 1: "No devices available"
+### Issue 1: "No Quick Launch button visible"
 
-**Cause**: Simulator not booted correctly
+**Cause**: Build failed or still running
 
-**Fix**: Already handled in the workflow (creates simulator if needed)
+**Fix**: 
+1. Wait for build to complete (check status)
+2. Verify build succeeded (all steps green ✅)
+3. Refresh the page
+4. Make sure you're looking at the `Runner.app` artifact, not other files
 
-### Issue 2: "Tests timeout"
+### Issue 2: "App crashes on launch in simulator"
 
-**Cause**: App takes too long to load
+**Cause**: Missing environment variables or configuration error
 
-**Fix**: Increase timeout in `screenshot_test.dart`:
-```dart
-await tester.pumpAndSettle(const Duration(seconds: 15)); // Increase from 10
-```
+**Fix**: 
+1. Check build logs for errors during "Build iOS app for simulator" step
+2. Verify environment variables are set in Codemagic:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+   - `REVENUECAT_IOS_PUBLIC_SDK_KEY`
+3. Re-run the build
 
-### Issue 3: "RevenueCat initialization failed"
+### Issue 3: "IAPs don't load in App Preview"
 
-**Cause**: Missing environment variables
+**Cause**: App Preview doesn't connect to real App Store (sandbox only)
 
-**Fix**: Ensure `REVENUECAT_IOS_PUBLIC_SDK_KEY` is set in Codemagic:
-1. Go to Codemagic → Your app → Environment variables
-2. Add to `revenuecat_env` group
-3. Re-run build
+**Important**: App Preview uses simulator, not real device, so:
+- ✅ You CAN verify UI loads correctly
+- ✅ You CAN see if offerings are fetched
+- ❌ You CANNOT complete actual purchases (need TestFlight for that)
 
-### Issue 4: "Integration test not found"
+**What to check**:
+1. Does the Upgrade Plan page load?
+2. Do you see all 16 subscription options?
+3. Are prices displayed (even if placeholder)?
+4. Check console logs for RevenueCat errors
 
-**Cause**: Test file missing
+### Issue 4: "Build takes too long"
 
-**Fix**: Ensure `integration_test/screenshot_test.dart` exists:
+**Cause**: Cold start or large dependencies
+
+**Normal**: First build takes 10-15 minutes
+**Expected**: Subsequent builds ~5-8 minutes
+
+**Fix**: Be patient, it's normal!
+
+## 📈 Best Practices for App Preview
+
+### 1. **Enable App Preview Feature First**
+
+If you don't see the App Preview option:
+1. Go to Codemagic → **App Preview** (left sidebar)
+2. Enable the feature
+3. Get 100 free trial minutes
+4. After that: $0.095/min
+
+### 2. **Test Before App Store Submission**
+
+Always preview after:
+- ✅ Fixing IAP configuration
+- ✅ Adding new features
+- ✅ UI/UX changes
+- ✅ Updating dependencies
+
+### 3. **Stop Sessions When Done**
+
+Save minutes by:
+- Clicking "Stop session" when finished testing
+- Don't leave simulator running idle
+- Each session max 20 minutes
+
+### 4. **Use for Quick Verification**
+
+App Preview is perfect for:
+- ✅ Checking if IAP screen loads
+- ✅ Verifying UI looks correct
+- ✅ Testing navigation
+- ✅ Sharing with team for review
+
+Not for:
+- ❌ Actual purchase testing (use TestFlight)
+- ❌ Performance testing
+- ❌ Long testing sessions
+
+## 🎯 Next Steps - START HERE!
+
+### Step 1: Push Changes
 ```bash
-ls -la integration_test/screenshot_test.dart
+git add .
+git commit -m "Enable iOS App Preview (Stellar) workflow"
+git push origin main
 ```
 
-## ⚙️ Customizing Tests
+### Step 2: Enable App Preview in Codemagic
+1. Go to https://codemagic.io/apps
+2. Click **"App Preview"** in left sidebar
+3. Click **"Enable App Preview"**
+4. You get 100 free trial minutes!
 
-### Add More Tests
+### Step 3: Start Your First Build
+1. Go to your app in Codemagic
+2. Click **"Start new build"**
+3. Select workflow: **"iOS App Preview"**
+4. Select branch: **main**
+5. Click **"Start new build"**
+6. Wait ~8-10 minutes
 
-Create new test files in `integration_test/`:
+### Step 4: Launch App in Browser
+1. Once build completes, scroll to **"Artifacts"**
+2. Find **`Runner.app`**
+3. Click **"Quick Launch"** 🚀
+4. iOS simulator loads in your browser!
 
-```dart
-// integration_test/iap_test.dart
-import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
-import 'package:mechanic_part/main.dart' as app;
+### Step 5: Test Your IAP Fix
+1. Login: `folabiyistar@gmail.com` / `Test123`
+2. Go to Profile → **Upgrade Plan**
+3. Verify all 16 subscription plans appear
+4. Check prices display correctly
+5. Try selecting different tiers
 
-void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+## 🎉 Success Criteria
 
-  testWidgets('IAP loads correctly', (tester) async {
-    app.main();
-    await tester.pumpAndSettle(const Duration(seconds: 5));
-    
-    // Add your test logic
-    expect(find.text('Upgrade Plan'), findsOneWidget);
-  });
-}
-```
+Your IAP fix is working if you see:
+- ✅ Upgrade Plan page loads without errors
+- ✅ All 4 tiers visible (Basic, Premium, VIP, VIP Gold)
+- ✅ Each tier shows its subscription options
+- ✅ Prices are displayed (even if simulator placeholders)
+- ✅ No "No packages available" message
 
-Then update `codemagic.yaml` to run it:
+## 🆘 Need Help?
 
-```yaml
-- name: Run Integration Tests
-  script: |
-    flutter test integration_test/screenshot_test.dart -d "$DEVICE_ID"
-    flutter test integration_test/iap_test.dart -d "$DEVICE_ID"
-```
+**Can't find Quick Launch button?**
+- Make sure build completed successfully (all steps green ✅)
+- Refresh the page
+- Check you're looking at `Runner.app`, not other artifacts
 
-### Change Simulator Device
+**App crashes in simulator?**
+- Check build logs for errors
+- Verify environment variables are set in Codemagic
 
-To test on iPhone instead of iPad:
-
-```yaml
-- name: Boot iOS Simulator
-  script: |
-    DEVICE_ID=$(xcrun simctl list devices available | grep "iPhone 15 Pro" | head -n 1 | grep -o '[A-F0-9-]\{36\}')
-```
-
-### Add Test Notifications
-
-Get notified when tests complete:
-
-In Codemagic UI:
-1. Go to your app → **Publishing**
-2. Add **Email** or **Slack** notification
-3. Select **iOS Integration Tests** workflow
-4. Check "Notify on build success" and "Notify on build failure"
-
-## 📈 Best Practices
-
-### 1. Run Tests Before Submitting to App Store
-
-Always run tests after:
-- Adding new features
-- Fixing bugs
-- Updating dependencies
-- Changing IAP configuration
-
-### 2. Keep Tests Fast
-
-Integration tests should complete in < 5 minutes:
-- Use minimal wait times
-- Skip unnecessary screens
-- Disable animations if possible
-
-### 3. Use Meaningful Test Names
-
-```dart
-// ❌ Bad
-testWidgets('test 1', (tester) async { ... });
-
-// ✅ Good
-testWidgets('Verify IAP offerings load on Upgrade Plan page', (tester) async { ... });
-```
-
-### 4. Check Test Coverage
-
-Add unit tests for critical code:
-- RevenueCat service methods
-- Payment logic
-- User authentication
-- Data validation
-
-## 🎯 Next Steps
-
-1. **Push changes** to trigger first test run:
-   ```bash
-   git add .
-   git commit -m "Add iOS integration tests"
-   git push origin main
-   ```
-
-2. **Manually trigger** a test build in Codemagic UI
-
-3. **Review results** and fix any failing tests
-
-4. **Set up notifications** to stay informed
-
-## 🆘 Troubleshooting
-
-### Build Stuck on "Boot iOS Simulator"
-
-Check Codemagic logs for:
-```
-Error: Unable to boot device
-```
-
-**Solution**: The workflow will create a new simulator automatically
-
-### Tests Pass Locally but Fail on Codemagic
-
-**Possible causes**:
-- Missing environment variables
-- Different iOS version on Codemagic
-- Timing issues (network delays)
-
-**Solution**: Add more detailed logging:
-```dart
-print('DEBUG: Current screen: ${find.byType(Scaffold)}');
-```
-
-### Need Help?
-
-1. Check Codemagic logs (very detailed)
-2. Review test output in artifacts
-3. Compare with local test run: `flutter test integration_test/screenshot_test.dart`
+**IAPs not loading?**
+- This is normal in simulator - it won't connect to real App Store
+- Check if UI loads and offerings are fetched
+- For real purchase testing, use TestFlight
 
 ---
 
-**Happy Testing!** 🚀
+**Ready to test your IAP fix!** 🚀 Follow the steps above to launch your app in the browser.
