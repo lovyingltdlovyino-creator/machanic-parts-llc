@@ -151,11 +151,11 @@ class _PaywallPageState extends State<PaywallPage> {
     try {
       debugPrint('[PaywallPage] Starting restore purchases...');
       final info = await RevenueCatService.instance.restorePurchases();
-      debugPrint('[PaywallPage] Restore complete. Active entitlements: ${info.entitlements.active.keys}');
+      debugPrint('[PaywallPage] Restore complete. Active entitlements: ${info?.entitlements.active.keys ?? "none"}');
       
       setState(() { _customerInfo = info; });
       
-      if (mounted) {
+      if (mounted && info != null) {
         if (info.entitlements.active.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
