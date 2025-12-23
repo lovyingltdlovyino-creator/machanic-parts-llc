@@ -2,7 +2,7 @@ name: mechanic_part
 description: "Car and spare parts marketplace app"
 publish_to: 'none'
 
-version: 1.2.6+5
+version: 1.2.6+6
 
 environment:
   sdk: ^3.5.4
@@ -23,6 +23,8 @@ dependencies:
   permission_handler: ^11.3.1
   url_launcher: ^6.3.0
   purchases_flutter: ^9.7.0
+  carousel_slider: ^4.2.1
+  smooth_page_indicator: ^1.1.0
 
 dev_dependencies:
   flutter_test:

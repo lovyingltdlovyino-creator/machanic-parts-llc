@@ -10,6 +10,8 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
 import 'widgets/footer.dart';
@@ -1829,6 +1831,7 @@ class _BrowsePageState extends State<BrowsePage> {
   String? _error;
   String? _lastSearchZip;
   double? _lastSearchRadius;
+  int _currentCarouselIndex = 0;
 
   @override
   void initState() {
@@ -2213,28 +2216,35 @@ class _BrowsePageState extends State<BrowsePage> {
                       ),
                       // Welcome text
                       Expanded(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Find Quality Auto Parts Faster',
-                              style: GoogleFonts.poppins(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Find Quality Auto Parts Faster',
+                                style: GoogleFonts.poppins(
+                                  fontSize: MediaQuery.of(context).size.width < 360 ? 18 : 22,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  height: 1.2,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Browse thousands of listings from verified sellers across the country.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Browse thousands of listings from verified sellers across the country.',
+                                style: TextStyle(
+                                  fontSize: MediaQuery.of(context).size.width < 360 ? 12 : 14,
+                                  color: Colors.white.withOpacity(0.9),
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -2249,9 +2259,14 @@ class _BrowsePageState extends State<BrowsePage> {
             child: _buildCategoriesSection(),
           ),
           
-          // Promoted Products Section
+          // Hero Carousel Section
           SliverToBoxAdapter(
-            child: _buildPromotedSection(),
+            child: _buildHeroCarousel(),
+          ),
+          
+          // Promoted Products Grid
+          SliverToBoxAdapter(
+            child: _buildPromotedGrid(),
           ),
           
           // Search Panel
@@ -2493,43 +2508,69 @@ class _BrowsePageState extends State<BrowsePage> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 100,
+            height: 110,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(left: 4),
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final category = categories[index];
-                return Container(
-                  width: 80,
-                  margin: const EdgeInsets.only(right: 12),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: (category['color'] as Color).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                return GestureDetector(
+                  onTap: () async {
+                    final selection = await context.push<String>('/categories');
+                    if (selection == null || selection.isEmpty) return;
+                    if (selection.startsWith('TYPE:')) {
+                      final type = selection.split(':').last;
+                      await filterByCategoryOrType(type: type);
+                    } else if (selection.startsWith('CAT:')) {
+                      final cat = selection.split(':').last;
+                      await filterByCategoryOrType(type: 'part', category: cat);
+                    }
+                  },
+                  child: Container(
+                    width: 85,
+                    margin: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 65,
+                          height: 65,
+                          decoration: BoxDecoration(
+                            color: (category['color'] as Color).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: (category['color'] as Color).withOpacity(0.2),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: (category['color'] as Color).withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            category['icon'] as IconData,
+                            color: category['color'] as Color,
+                            size: 32,
+                          ),
                         ),
-                        child: Icon(
-                          category['icon'] as IconData,
-                          color: category['color'] as Color,
-                          size: 30,
+                        const SizedBox(height: 8),
+                        Text(
+                          category['name'] as String,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.neutralDark,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        category['name'] as String,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: Duration(milliseconds: 50 * index)).slideX(begin: 0.3, end: 0),
                 );
               },
             ),
@@ -2539,19 +2580,299 @@ class _BrowsePageState extends State<BrowsePage> {
     );
   }
 
-  Widget _buildPromotedSection() {
+  Widget _buildHeroCarousel() {
+    if (_featuredListings.isEmpty) return const SizedBox.shrink();
+    
+    final carouselItems = _featuredListings.take(5).toList();
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 20),
+      child: Column(
+        children: [
+          CarouselSlider.builder(
+            itemCount: carouselItems.length,
+            options: CarouselOptions(
+              height: 280,
+              autoPlay: true,
+              autoPlayInterval: const Duration(seconds: 5),
+              autoPlayAnimationDuration: const Duration(milliseconds: 800),
+              autoPlayCurve: Curves.fastOutSlowIn,
+              enlargeCenterPage: true,
+              viewportFraction: 0.85,
+              aspectRatio: 16/9,
+              onPageChanged: (index, reason) {
+                setState(() => _currentCarouselIndex = index);
+              },
+            ),
+            itemBuilder: (context, index, realIndex) {
+              final listing = carouselItems[index];
+              return _buildCarouselCard(listing);
+            },
+          ),
+          const SizedBox(height: 16),
+          AnimatedSmoothIndicator(
+            activeIndex: _currentCarouselIndex,
+            count: carouselItems.length,
+            effect: WormEffect(
+              dotHeight: 8,
+              dotWidth: 8,
+              activeDotColor: AppColors.primary,
+              dotColor: Colors.grey.shade300,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCarouselCard(Map<String, dynamic> listing) {
+    final photos = listing['listing_photos'] as List? ?? [];
+    final firstPhoto = photos.isNotEmpty ? photos.first['storage_path'] : null;
+    final title = listing['title'] ?? 'No Title';
+    final price = listing['price'];
+    final condition = listing['condition'] ?? '';
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailsPage(listing: listing),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background Image
+              if (firstPhoto != null)
+                FutureBuilder<String>(
+                  future: Supabase.instance.client.storage
+                      .from('listing-photos')
+                      .createSignedUrl(firstPhoto, 3600),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return Image.network(
+                        snapshot.data!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image_not_supported, size: 50),
+                        ),
+                      );
+                    }
+                    return Container(color: Colors.grey.shade200);
+                  },
+                )
+              else
+                Container(
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.directions_car, size: 80, color: Colors.grey),
+                ),
+              
+              // Gradient Overlay
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                    stops: const [0.5, 1.0],
+                  ),
+                ),
+              ),
+              
+              // Content
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (condition.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _getConditionColor(condition),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            condition.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              price != null ? '\$${price.toStringAsFixed(2)}' : 'Contact for price',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.9),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Featured Badge
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.amber,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withOpacity(0.5),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star, color: Colors.white, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'FEATURED',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 300.ms).scale(delay: 100.ms);
+  }
+
+  Color _getConditionColor(String condition) {
+    switch (condition.toLowerCase()) {
+      case 'new':
+        return Colors.green;
+      case 'like new':
+        return Colors.lightGreen;
+      case 'good':
+        return Colors.blue;
+      case 'fair':
+        return Colors.orange;
+      case 'for parts':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildPromotedGrid() {
+    if (_featuredListings.length <= 5) return const SizedBox.shrink();
+    
+    final gridItems = _featuredListings.skip(5).take(6).toList();
+    
     return Container(
       margin: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Promoted',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: AppColors.neutralDark,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'More Featured Items',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.neutralDark,
+                ),
+              ),
+              if (_featuredListings.length > 11)
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PromotedProductsPage(listings: _featuredListings),
+                      ),
+                    );
+                  },
+                  child: Text(
+                    'View All',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 12),
           LayoutBuilder(
@@ -2568,37 +2889,13 @@ class _BrowsePageState extends State<BrowsePage> {
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
-                itemCount: _featuredListings.length > 10 ? 10 : _featuredListings.length,
+                itemCount: gridItems.length,
                 itemBuilder: (context, index) {
-                  return PromotedCard(listing: _featuredListings[index]);
+                  return PromotedCard(listing: gridItems[index]);
                 },
               );
             },
           ),
-          if (_featuredListings.length > 10) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PromotedProductsPage(listings: _featuredListings),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text('Click here to view more'),
-              ),
-            ),
-          ],
         ],
       ),
     );

@@ -8,10 +8,10 @@ class Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Hide footer on mobile-like experiences to keep UI clean
+    // Hide footer on mobile screens (both web and native) to keep UI clean
     final width = MediaQuery.of(context).size.width;
-    final isMobilePlatform = !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
-    if (isMobilePlatform && width < 700) {
+    // Hide footer on all mobile screens regardless of platform
+    if (width < 700) {
       return const SizedBox.shrink();
     }
     final year = DateTime.now().year;
