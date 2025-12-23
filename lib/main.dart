@@ -1275,16 +1275,7 @@ class _WebHomeShellState extends State<WebHomeShell> {
           ),
           const VerticalDivider(width: 1),
           Expanded(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: pages[safeIndex],
-                ),
-              ),
-            ),
+            child: pages[safeIndex],
           ),
         ],
       ),
