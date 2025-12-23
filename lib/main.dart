@@ -1302,6 +1302,7 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
   List<Map<String, dynamic>> _featuredListings = [];
   bool _loading = false;
   String? _error;
+  int _currentCarouselIndex = 0;
 
   @override
   void initState() {
@@ -1654,10 +1655,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    return ListView(
+      children: [
           // Hero header
           Container(
             height: 240,
@@ -1730,6 +1729,12 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
               ),
             ),
           ),
+
+          // Carousel Section
+          if (_featuredListings.isNotEmpty) ...[
+            _buildWebCarousel(),
+            const SizedBox(height: 24),
+          ],
 
           // Featured
           if (_featuredListings.isNotEmpty) ...[
@@ -1807,8 +1812,179 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
 
           const SizedBox(height: 32),
         ],
+    );
+  }
+
+  Widget _buildWebCarousel() {
+    if (_featuredListings.isEmpty) return const SizedBox.shrink();
+    
+    final carouselItems = _featuredListings.take(5).toList();
+    if (carouselItems.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+            child: Text(
+              'Featured Products',
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: AppColors.neutralDark,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 400,
+            child: carousel.CarouselSlider.builder(
+              itemCount: carouselItems.length,
+              options: carousel.CarouselOptions(
+                height: 400,
+                viewportFraction: 0.85,
+                enlargeCenterPage: true,
+                autoPlay: true,
+                autoPlayInterval: const Duration(seconds: 5),
+                autoPlayAnimationDuration: const Duration(milliseconds: 800),
+                onPageChanged: (index, reason) {
+                  setState(() => _currentCarouselIndex = index);
+                },
+              ),
+              itemBuilder: (context, index, realIndex) {
+                final listing = carouselItems[index];
+                return _buildWebCarouselCard(listing);
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: AnimatedSmoothIndicator(
+              activeIndex: _currentCarouselIndex,
+              count: carouselItems.length,
+              effect: WormEffect(
+                dotHeight: 8,
+                dotWidth: 8,
+                activeDotColor: AppColors.primary,
+                dotColor: Colors.grey.shade300,
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildWebCarouselCard(Map<String, dynamic> listing) {
+    final photos = listing['listing_photos'] as List?;
+    String imageUrl = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop';
+    
+    if (photos != null && photos.isNotEmpty) {
+      final firstPhoto = photos.first;
+      final storagePath = firstPhoto['storage_path'];
+      if (storagePath != null) {
+        imageUrl = Supabase.instance.client.storage
+            .from('listing-images')
+            .getPublicUrl(storagePath);
+      }
+    }
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailsPage(listing: listing),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.image_not_supported, size: 80, color: Colors.grey),
+                  );
+                },
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        listing['title'] ?? 'Listing',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _formatWebPrice(listing),
+                        style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatWebPrice(Map<String, dynamic> listing) {
+    final raw = listing['price'] ?? listing['price_usd'];
+    if (raw is num) {
+      final d = raw.toDouble();
+      return '\$${d % 1 == 0 ? d.toStringAsFixed(0) : d.toStringAsFixed(2)}';
+    }
+    final parsed = double.tryParse(raw?.toString() ?? '');
+    if (parsed == null) return '\$0';
+    return '\$${parsed % 1 == 0 ? parsed.toStringAsFixed(0) : parsed.toStringAsFixed(2)}';
   }
 }
 
