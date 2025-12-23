@@ -15,91 +15,137 @@ class Footer extends StatelessWidget {
       return const SizedBox.shrink();
     }
     final year = DateTime.now().year;
-    return Material(
-      color: Colors.white,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Divider(height: 1),
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1200),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Brand
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _brand(),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        TextButton(onPressed: () => context.go('/about'), child: const Text('About Us')),
-                        TextButton(onPressed: () => context.go('/contact'), child: const Text('Contact Us')),
-                        TextButton(onPressed: () => context.go('/privacy'), child: const Text('Privacy Policy')),
-                        TextButton(onPressed: () => context.go('/terms'), child: const Text('Terms of Service')),
-                        ElevatedButton(
-                          onPressed: () => context.go('/auth'),
-                          child: const Text('Become a Seller'),
-                        ),
-                      ],
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        height: 32,
+                        width: 32,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 32,
+                            width: 32,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF0052CC),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.build_rounded, color: Colors.white, size: 18),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Mechanic Part LLC',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2C2C2C),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            color: Colors.grey.shade100,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1200),
-                child: Text(
-                  '© $year Mechanic Part LLC. All rights reserved.',
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade700),
+                const SizedBox(height: 20),
+                
+                // Navigation Links - Centered
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildFooterLink(context, 'About Us', '/about'),
+                    _buildFooterDivider(),
+                    _buildFooterLink(context, 'Contact Us', '/contact'),
+                    _buildFooterDivider(),
+                    _buildFooterLink(context, 'Privacy Policy', '/privacy'),
+                    _buildFooterDivider(),
+                    _buildFooterLink(context, 'Terms of Service', '/terms'),
+                  ],
                 ),
-              ),
+                const SizedBox(height: 16),
+                
+                // CTA Button
+                SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    onPressed: () => context.go('/auth'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0052CC),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Become a Seller',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Copyright - Centered
+                Text(
+                  '© $year Mechanic Part LLC. All rights reserved.',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _brand() {
-    return Row(
-      children: [
-        // Logo
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
-            'assets/images/logo.png',
-            height: 36,
-            width: 36,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                height: 36,
-                width: 36,
-                decoration: const BoxDecoration(color: Color(0xFF0052CC), shape: BoxShape.circle),
-                child: const Icon(Icons.build_rounded, color: Colors.white, size: 20),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          'Mechanic Part LLC',
+  Widget _buildFooterLink(BuildContext context, String label, String route) {
+    return InkWell(
+      onTap: () => context.go(route),
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
           style: GoogleFonts.poppins(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF2C2C2C),
+            fontSize: 13,
+            color: Colors.grey.shade700,
+            fontWeight: FontWeight.w400,
           ),
         ),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildFooterDivider() {
+    return Text(
+      '•',
+      style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
     );
   }
 
