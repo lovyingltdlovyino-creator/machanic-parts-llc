@@ -1275,7 +1275,11 @@ class _WebHomeShellState extends State<WebHomeShell> {
           ),
           const VerticalDivider(width: 1),
           Expanded(
-            child: pages[safeIndex],
+            child: Column(
+              children: [
+                Expanded(child: pages[safeIndex]),
+              ],
+            ),
           ),
         ],
       ),
