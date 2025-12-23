@@ -10,7 +10,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
-import 'package:carousel_slider/carousel_slider.dart' as carousel;
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'services/notification_service.dart';
 import 'services/revenuecat_service.dart';
@@ -2589,9 +2589,9 @@ class _BrowsePageState extends State<BrowsePage> {
       margin: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          carousel.CarouselSlider.builder(
+          CarouselSlider.builder(
             itemCount: carouselItems.length,
-            options: carousel.CarouselOptions(
+            options: CarouselOptions(
               height: 280,
               autoPlay: true,
               autoPlayInterval: const Duration(seconds: 5),
