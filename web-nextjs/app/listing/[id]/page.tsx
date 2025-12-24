@@ -30,12 +30,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     (a.sort_order || 0) - (b.sort_order || 0)
   )
 
-  const imageUrls = photos.map((photo: any) => {
-    const { data } = supabase.storage
-      .from('listing-images')
-      .getPublicUrl(photo.storage_path)
-    return data.publicUrl
-  })
+  const imageUrls = photos.map((photo: any) => 
+    `https://pyfughpblzbgrfuhymka.supabase.co/storage/v1/object/public/listing-images/${photo.storage_path}`
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -46,24 +43,26 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <div className="space-y-4">
               {imageUrls.length > 0 ? (
                 <>
-                  <div className="relative aspect-square rounded-lg overflow-hidden">
+                  <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                     <Image
                       src={imageUrls[0]}
                       alt={listing.title}
                       fill
                       className="object-cover"
                       priority
+                      unoptimized
                     />
                   </div>
                   {imageUrls.length > 1 && (
                     <div className="grid grid-cols-4 gap-2">
                       {imageUrls.slice(1, 5).map((url: string, i: number) => (
-                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden">
+                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100">
                           <Image
                             src={url}
                             alt={`Photo ${i + 2}`}
                             fill
                             className="object-cover"
+                            unoptimized
                           />
                         </div>
                       ))}

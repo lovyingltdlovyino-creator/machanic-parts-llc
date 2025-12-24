@@ -2,36 +2,30 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { MapPin } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
-import { createClient } from '@/lib/supabase/server'
 
 interface ListingCardProps {
   listing: any
 }
 
-export async function ListingCard({ listing }: ListingCardProps) {
-  const supabase = await createClient()
-  
+export function ListingCard({ listing }: ListingCardProps) {
   const photos = listing.listing_photos || []
   const firstPhoto = photos.find((p: any) => p.sort_order === 0) || photos[0]
   
-  let imageUrl = '/placeholder-part.jpg'
-  if (firstPhoto?.storage_path) {
-    const { data } = supabase.storage
-      .from('listing-images')
-      .getPublicUrl(firstPhoto.storage_path)
-    imageUrl = data.publicUrl
-  }
+  const imageUrl = firstPhoto?.storage_path 
+    ? `https://pyfughpblzbgrfuhymka.supabase.co/storage/v1/object/public/listing-images/${firstPhoto.storage_path}`
+    : '/placeholder-part.jpg'
 
   return (
     <Link href={`/listing/${listing.id}`} className="group">
       <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-        <div className="relative aspect-square">
+        <div className="relative aspect-square bg-gray-100">
           <Image
             src={imageUrl}
             alt={listing.title || 'Product'}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-200"
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+            unoptimized
           />
           {listing.condition && (
             <span className="absolute top-2 right-2 px-2 py-1 text-xs font-medium bg-white rounded-full">
