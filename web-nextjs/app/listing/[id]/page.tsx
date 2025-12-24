@@ -12,17 +12,31 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: listing, error } = await supabase
-    .from('listings')
-    .select(`
-      *,
-      listing_photos(storage_path, sort_order),
-      profiles(business_name, phone_number, user_type)
-    `)
-    .eq('id', id)
-    .single()
+  let listing: any = null
 
-  if (!listing || error) {
+  try {
+    const { data, error } = await supabase
+      .from('listings')
+      .select(`
+        *,
+        listing_photos(storage_path, sort_order),
+        profiles(business_name, phone_number, user_type)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      console.error('Error fetching listing:', error)
+      notFound()
+    }
+
+    listing = data
+  } catch (error) {
+    console.error('Exception fetching listing:', error)
+    notFound()
+  }
+
+  if (!listing) {
     notFound()
   }
 
