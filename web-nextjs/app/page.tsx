@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { ListingCard } from '@/components/ListingCard'
 import { SearchBar } from '@/components/SearchBar'
+import { FeaturedCarousel } from '@/components/FeaturedCarousel'
+import { Categories } from '@/components/Categories'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -8,25 +10,21 @@ export const revalidate = 0
 export default async function Home() {
   const supabase = await createClient()
 
-  let listings: any[] = []
+  let featuredListings: any[] = []
+  let allListings: any[] = []
 
   try {
-    // Fetch featured listings
-    const { data: rankedIds, error: rankedError } = await supabase
+    // Fetch featured listings for carousel
+    const { data: featuredIds } = await supabase
       .from('listings_ranked')
       .select('id')
       .eq('is_featured', true)
       .order('score', { ascending: false })
-      .limit(12)
+      .limit(5)
 
-    if (rankedError) {
-      console.error('Error fetching ranked listings:', rankedError)
-    }
-
-    const ids = rankedIds?.map(r => r.id) || []
-    
-    if (ids.length > 0) {
-      const { data, error } = await supabase
+    if (featuredIds && featuredIds.length > 0) {
+      const ids = featuredIds.map(r => r.id)
+      const { data } = await supabase
         .from('listings')
         .select(`
           *,
@@ -35,14 +33,35 @@ export default async function Home() {
         `)
         .in('id', ids)
       
-      if (error) {
-        console.error('Error fetching listings:', error)
-      } else {
-        listings = data || []
-        
-        // Sort by ranked order
+      if (data) {
+        featuredListings = data
         const order = Object.fromEntries(ids.map((id, i) => [id, i]))
-        listings.sort((a, b) => (order[a.id] ?? 999) - (order[b.id] ?? 999))
+        featuredListings.sort((a, b) => (order[a.id] ?? 999) - (order[b.id] ?? 999))
+      }
+    }
+
+    // Fetch ALL listings (not just featured)
+    const { data: allRankedIds } = await supabase
+      .from('listings_ranked')
+      .select('id')
+      .order('score', { ascending: false})
+      .limit(20)
+
+    if (allRankedIds && allRankedIds.length > 0) {
+      const ids = allRankedIds.map(r => r.id)
+      const { data } = await supabase
+        .from('listings')
+        .select(`
+          *,
+          listing_photos(storage_path, sort_order),
+          profiles(business_name, user_type)
+        `)
+        .in('id', ids)
+      
+      if (data) {
+        allListings = data
+        const order = Object.fromEntries(ids.map((id, i) => [id, i]))
+        allListings.sort((a, b) => (order[a.id] ?? 999) - (order[b.id] ?? 999))
       }
     }
   } catch (error) {
