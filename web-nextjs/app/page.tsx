@@ -66,15 +66,27 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Listings Section */}
+      {/* Categories Section */}
+      <div className="max-w-7xl mx-auto">
+        <Categories />
+      </div>
+
+      {/* Featured Carousel */}
+      {featuredListings.length > 0 && (
+        <div className="max-w-7xl mx-auto">
+          <FeaturedCarousel listings={featuredListings} />
+        </div>
+      )}
+
+      {/* All Listings Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Featured Listings</h2>
+          <h2 className="text-2xl font-bold text-gray-900">All Listings</h2>
         </div>
 
-        {listings.length > 0 ? (
+        {allListings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {listings.map((listing) => (
+            {allListings.map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}
           </div>
