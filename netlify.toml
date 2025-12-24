@@ -1,22 +1,9 @@
-# Netlify configuration for Flutter Web build
-# Build command uses a script that installs Flutter and builds the site
+# Next.js Web Application
 [build]
-  command = "bash scripts/build_netlify.sh"
-  publish = "build/web"
+  base = "web-nextjs"
+  command = "npm run build"
+  publish = ".next"
 
-# Caching headers (avoid stale index, cache immutable assets)
-[[headers]]
-  for = "/index.html"
-  [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
-
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Redirect all routes to index.html for SPA routing (Next.js)
-# This enables clean URLs like /contact, /about instead of /#/contact
 [[redirects]]
   from = "/*"
   to = "/index.html"
