@@ -5,11 +5,14 @@ import { MapPin, Calendar, Tag } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { format } from 'date-fns'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: listing } = await supabase
+  const { data: listing, error } = await supabase
     .from('listings')
     .select(`
       *,
@@ -19,7 +22,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     .eq('id', id)
     .single()
 
-  if (!listing) {
+  if (!listing || error) {
     notFound()
   }
 

@@ -2,35 +2,51 @@ import { createClient } from '@/lib/supabase/server'
 import { ListingCard } from '@/components/ListingCard'
 import { SearchBar } from '@/components/SearchBar'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function Home() {
   const supabase = await createClient()
 
-  // Fetch featured listings
-  const { data: rankedIds } = await supabase
-    .from('listings_ranked')
-    .select('id')
-    .eq('is_featured', true)
-    .order('score', { ascending: false })
-    .limit(12)
-
-  const ids = rankedIds?.map(r => r.id) || []
-  
   let listings: any[] = []
-  if (ids.length > 0) {
-    const { data } = await supabase
-      .from('listings')
-      .select(`
-        *,
-        listing_photos(storage_path, sort_order),
-        profiles(business_name, user_type)
-      `)
-      .in('id', ids)
+
+  try {
+    // Fetch featured listings
+    const { data: rankedIds, error: rankedError } = await supabase
+      .from('listings_ranked')
+      .select('id')
+      .eq('is_featured', true)
+      .order('score', { ascending: false })
+      .limit(12)
+
+    if (rankedError) {
+      console.error('Error fetching ranked listings:', rankedError)
+    }
+
+    const ids = rankedIds?.map(r => r.id) || []
     
-    listings = data || []
-    
-    // Sort by ranked order
-    const order = Object.fromEntries(ids.map((id, i) => [id, i]))
-    listings.sort((a, b) => (order[a.id] ?? 999) - (order[b.id] ?? 999))
+    if (ids.length > 0) {
+      const { data, error } = await supabase
+        .from('listings')
+        .select(`
+          *,
+          listing_photos(storage_path, sort_order),
+          profiles(business_name, user_type)
+        `)
+        .in('id', ids)
+      
+      if (error) {
+        console.error('Error fetching listings:', error)
+      } else {
+        listings = data || []
+        
+        // Sort by ranked order
+        const order = Object.fromEntries(ids.map((id, i) => [id, i]))
+        listings.sort((a, b) => (order[a.id] ?? 999) - (order[b.id] ?? 999))
+      }
+    }
+  } catch (error) {
+    console.error('Error loading listings:', error)
   }
 
   return (
