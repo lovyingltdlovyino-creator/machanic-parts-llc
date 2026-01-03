@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Package, MessageSquare, User, LogOut } from 'lucide-react'
+import { Home, Package, MessageSquare, User, LogOut, Menu, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -13,6 +13,7 @@ export function Navigation() {
   const supabase = createClient()
   const [user, setUser] = useState<any>(null)
   const [userType, setUserType] = useState<string>('buyer')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -57,11 +58,22 @@ export function Navigation() {
                 alt="Mechanic Part LLC" 
                 className="w-10 h-10 object-contain"
               />
-              <span className="font-semibold text-lg text-gray-900">Mechanic Part LLC</span>
+              <span className="font-semibold text-base sm:text-lg text-gray-900">Mechanic Part LLC</span>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Mobile menu button */}
+          <div className="flex items-center lg:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-md text-gray-700 hover:bg-gray-100"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+
+          {/* Desktop menu */}
+          <div className="hidden lg:flex items-center space-x-4">
             <Link
               href="/"
               className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
@@ -84,14 +96,12 @@ export function Navigation() {
               </Link>
             )}
 
+            <Link href="/blog" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+              Blog
+            </Link>
+
             {user && (
               <>
-                <Link href="/" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                  Browse
-                </Link>
-                <Link href="/blog" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
-                  Blog
-                </Link>
                 <Link
                   href="/chat"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
@@ -132,6 +142,92 @@ export function Navigation() {
             )}
           </div>
         </div>
+
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-200 py-4">
+            <div className="flex flex-col space-y-2">
+              <Link
+                href="/"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium ${
+                  isActive('/') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Home className="w-4 h-4" />
+                <span>Browse</span>
+              </Link>
+
+              <Link
+                href="/blog"
+                className="text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md text-sm font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Blog
+              </Link>
+
+              {user && userType === 'seller' && (
+                <Link
+                  href="/my-products"
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium ${
+                    isActive('/my-products') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>My Products</span>
+                </Link>
+              )}
+
+              {user && (
+                <>
+                  <Link
+                    href="/chat"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium ${
+                      isActive('/chat') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Chat</span>
+                  </Link>
+
+                  <Link
+                    href="/profile"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium ${
+                      isActive('/profile') ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Profile</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      handleSignOut()
+                      setMobileMenuOpen(false)
+                    }}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </>
+              )}
+
+              {!user && (
+                <Link
+                  href="/auth"
+                  className="mx-4 px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 text-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )

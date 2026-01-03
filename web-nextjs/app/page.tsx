@@ -126,9 +126,9 @@ export default function Home() {
 
       {/* All Listings Section with Ads Sidebar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
-          <div className="flex-1">
+          <div className="flex-1 order-2 lg:order-1">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">All Listings</h2>
               <p className="text-sm text-gray-600">
@@ -180,9 +180,9 @@ export default function Home() {
             )}
           </div>
 
-          {/* Ads Sidebar - Desktop Only */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
-            <div className="sticky top-8">
+          {/* Ads Sidebar */}
+          <aside className="w-full lg:w-80 flex-shrink-0 order-1 lg:order-2">
+            <div className="lg:sticky lg:top-8">
               <AdsSidebar />
             </div>
           </aside>

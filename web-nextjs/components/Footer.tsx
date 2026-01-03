@@ -67,15 +67,6 @@ export function Footer() {
             </Link>
           </div>
 
-          {!loading && !isSeller && (
-            <Link
-              href="/auth"
-              className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-            >
-              Become a Seller
-            </Link>
-          )}
-
           <p className="text-sm text-gray-600">
             © {currentYear} Mechanic Part LLC. All rights reserved.
           </p>
