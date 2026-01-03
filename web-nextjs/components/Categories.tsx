@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Car, Settings, Disc, Zap, Wrench } from 'lucide-react'
 
 const categories = [
-  { name: 'Vehicles & Cars', icon: Car, color: 'bg-blue-100 text-blue-600 border-blue-200', type: 'vehicle' },
+  { name: 'Vehicles & Cars', icon: Car, color: 'bg-blue-100 text-blue-600 border-blue-200', type: 'car' },
   { name: 'Engine Parts', icon: Settings, color: 'bg-orange-100 text-orange-600 border-orange-200', type: 'part', category: 'engine' },
   { name: 'Tires & Wheels', icon: Disc, color: 'bg-green-100 text-green-600 border-green-200', type: 'part', category: 'tyres' },
   { name: 'Electronics', icon: Zap, color: 'bg-purple-100 text-purple-600 border-purple-200', type: 'part', category: 'electronics' },
@@ -22,8 +22,8 @@ export function Categories() {
       params.set('category', category.category)
     }
     
-    // Navigate to search/browse page with filters
-    router.push(`/?${params.toString()}`)
+    // Navigate to search page with filters
+    router.push(`/search?${params.toString()}`)
   }
 
   return (

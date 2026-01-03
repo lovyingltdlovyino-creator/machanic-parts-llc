@@ -7,8 +7,13 @@ import { format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+export const dynamicParams = true
 
-export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ListingDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
   const { id } = await params
   const supabase = await createClient()
 
@@ -20,7 +25,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       .select(`
         *,
         listing_photos(storage_path, sort_order),
-        profiles(business_name, phone_number, user_type)
+        profiles(business_name, user_type)
       `)
       .eq('id', id)
       .single()
@@ -143,16 +148,16 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
                     {listing.profiles.business_name && (
                       <p className="text-gray-700">{listing.profiles.business_name}</p>
                     )}
-                    {listing.profiles.phone_number && (
-                      <p className="text-gray-700">{listing.profiles.phone_number}</p>
-                    )}
                   </div>
                 </div>
               )}
 
-              <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
-                Contact Seller
-              </button>
+              <a 
+                href={`/chat?listing_id=${listing.id}&seller_id=${listing.owner_id}`}
+                className="block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-center"
+              >
+                Chat with Seller
+              </a>
             </div>
           </div>
         </div>

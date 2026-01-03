@@ -1832,6 +1832,9 @@ class _BrowsePageState extends State<BrowsePage> {
   String? _lastSearchZip;
   double? _lastSearchRadius;
   int _currentCarouselIndex = 0;
+  int _currentPage = 1;
+  int _totalCount = 0;
+  static const int _itemsPerPage = 20;
 
   @override
   void initState() {
@@ -1898,11 +1901,19 @@ class _BrowsePageState extends State<BrowsePage> {
     });
 
     try {
+      // Get total count
+      final countResp = await Supabase.instance.client
+          .from('listings_ranked')
+          .select('id', const FetchOptions(count: CountOption.exact, head: true));
+      _totalCount = countResp.count ?? 0;
+
+      // Fetch paginated listings
+      final offset = (_currentPage - 1) * _itemsPerPage;
       final ranked = await Supabase.instance.client
           .from('listings_ranked')
           .select('id')
           .order('score', ascending: false)
-          .limit(20);
+          .range(offset, offset + _itemsPerPage - 1);
 
       final ids = List<Map<String, dynamic>>.from(ranked ?? [])
           .map((e) => e['id'])
@@ -2361,6 +2372,63 @@ class _BrowsePageState extends State<BrowsePage> {
                             );
                           },
                         ),
+          
+          // Pagination controls
+          SliverToBoxAdapter(
+            child: _buildPaginationControls(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaginationControls() {
+    final totalPages = (_totalCount / _itemsPerPage).ceil();
+    if (totalPages <= 1) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _currentPage > 1
+                ? () {
+                    setState(() => _currentPage--);
+                    _loadListings();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            label: const Text('Previous'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Page $_currentPage of $totalPages',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: _currentPage < totalPages
+                ? () {
+                    setState(() => _currentPage++);
+                    _loadListings();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            label: const Text('Next'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
         ],
       ),
     );

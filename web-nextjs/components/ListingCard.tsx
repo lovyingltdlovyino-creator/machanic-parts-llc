@@ -41,7 +41,11 @@ export function ListingCard({ listing }: ListingCardProps) {
           
           <div className="flex items-center text-sm text-gray-600 mb-2">
             <MapPin className="w-3 h-3 mr-1" />
-            <span>{listing.zip_code || 'Location not specified'}</span>
+            <span>
+              {listing.profiles?.city && listing.profiles?.state 
+                ? `${listing.profiles.city}, ${listing.profiles.state}`
+                : listing.profiles?.city || listing.profiles?.state || listing.zip_code || 'Location not specified'}
+            </span>
           </div>
 
           <div className="flex items-center justify-between">

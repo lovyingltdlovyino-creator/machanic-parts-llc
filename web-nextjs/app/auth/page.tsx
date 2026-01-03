@@ -35,25 +35,42 @@ export default function AuthPage() {
         if (error) throw error
 
         if (data.user) {
-          // Create profile
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            user_type: userType,
-            email: email,
-          })
-
-          router.push('/complete-profile')
+          // Sign out immediately after signup (email confirmation required)
+          await supabase.auth.signOut()
+          
+          // Show email confirmation message
+          alert(`Check Your Email\n\nWe've sent a confirmation email to ${email}.\n\nPlease check your email and click the confirmation link to activate your account.\n\nAfter confirming, you can sign in to complete your profile.`)
+          
+          // Reset form and switch to sign in
+          setIsSignUp(false)
+          setEmail('')
+          setPassword('')
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
 
         if (error) throw error
 
-        router.push('/')
-        router.refresh()
+        if (data.user) {
+          // Check if user has completed profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('profile_completed')
+            .eq('id', data.user.id)
+            .maybeSingle()
+          
+          if (!profile || profile.profile_completed !== true) {
+            // User needs to complete profile
+            router.push('/complete-profile')
+          } else {
+            // User has completed profile, go to home
+            router.push('/')
+          }
+          router.refresh()
+        }
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred')
