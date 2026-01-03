@@ -14,7 +14,7 @@ export default function ConversationPage() {
   const [messageText, setMessageText] = useState('')
   const [otherUserTyping, setOtherUserTyping] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const typingTimeoutRef = useRef<NodeJS.Timeout>()
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const params = useParams()
   const supabase = createClient()
