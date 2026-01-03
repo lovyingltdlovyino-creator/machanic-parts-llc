@@ -7,6 +7,7 @@ import { SearchBar } from '@/components/SearchBar'
 import { FeaturedCarousel } from '@/components/FeaturedCarousel'
 import { Categories } from '@/components/Categories'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { AdsSidebar } from '@/components/AdsSidebar'
 
 const ITEMS_PER_PAGE = 20
 
@@ -123,57 +124,69 @@ export default function Home() {
         </div>
       )}
 
-      {/* All Listings Section */}
+      {/* All Listings Section with Ads Sidebar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">All Listings</h2>
-          <p className="text-sm text-gray-600">
-            Page {currentPage} of {Math.ceil(totalCount / ITEMS_PER_PAGE) || 1}
-          </p>
-        </div>
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Listings</h2>
+              <p className="text-sm text-gray-600">
+                Page {currentPage} of {Math.ceil(totalCount / ITEMS_PER_PAGE) || 1}
+              </p>
+            </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Loading...</p>
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading...</p>
+              </div>
+            ) : allListings.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {allListings.map((listing) => (
+                    <ListingCard key={listing.id} listing={listing} />
+                  ))}
+                </div>
+                
+                {/* Pagination Controls */}
+                <div className="flex justify-center items-center gap-4 mt-8">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+                  
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage} of {Math.ceil(totalCount / ITEMS_PER_PAGE)}
+                  </span>
+                  
+                  <button
+                    onClick={() => setCurrentPage(p => p + 1)}
+                    disabled={currentPage >= Math.ceil(totalCount / ITEMS_PER_PAGE)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No listings available at this time.</p>
+              </div>
+            )}
           </div>
-        ) : allListings.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {allListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
+
+          {/* Ads Sidebar - Desktop Only */}
+          <aside className="hidden lg:block w-80 flex-shrink-0">
+            <div className="sticky top-8">
+              <AdsSidebar />
             </div>
-            
-            {/* Pagination Controls */}
-            <div className="flex justify-center items-center gap-4 mt-8">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {Math.ceil(totalCount / ITEMS_PER_PAGE)}
-              </span>
-              
-              <button
-                onClick={() => setCurrentPage(p => p + 1)}
-                disabled={currentPage >= Math.ceil(totalCount / ITEMS_PER_PAGE)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No listings available at this time.</p>
-          </div>
-        )}
+          </aside>
+        </div>
       </div>
     </div>
   )

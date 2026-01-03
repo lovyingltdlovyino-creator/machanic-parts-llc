@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [subscriptionsEnabled, setSubscriptionsEnabled] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -29,7 +30,23 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile()
+    checkSubscriptionGating()
   }, [])
+
+  const checkSubscriptionGating = async () => {
+    try {
+      const { data } = await supabase
+        .from('app_config')
+        .select('subscriptions_enabled')
+        .maybeSingle()
+      
+      if (data) {
+        setSubscriptionsEnabled(data.subscriptions_enabled || false)
+      }
+    } catch (error) {
+      console.error('Error checking subscription gating:', error)
+    }
+  }
 
   const loadProfile = async () => {
     try {
@@ -236,8 +253,8 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Seller Plan Card */}
-        {isSeller && (
+        {/* Seller Plan Card - Only show if subscriptions are enabled */}
+        {isSeller && subscriptionsEnabled && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
             <div className="flex justify-between items-start">
               <div>

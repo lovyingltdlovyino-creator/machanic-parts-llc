@@ -1,7 +1,40 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 export function Footer() {
   const currentYear = new Date().getFullYear()
+  const [isSeller, setIsSeller] = useState(false)
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    checkUserType()
+  }, [])
+  
+  const checkUserType = async () => {
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('user_type')
+          .eq('id', user.id)
+          .maybeSingle()
+        
+        if (profile?.user_type === 'seller') {
+          setIsSeller(true)
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user type:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <footer className="bg-gray-50 border-t border-gray-200 mt-auto">
@@ -32,12 +65,14 @@ export function Footer() {
             </Link>
           </div>
 
-          <Link
-            href="/auth"
-            className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-          >
-            Become a Seller
-          </Link>
+          {!loading && !isSeller && (
+            <Link
+              href="/auth"
+              className="px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+            >
+              Become a Seller
+            </Link>
+          )}
 
           <p className="text-sm text-gray-600">
             © {currentYear} Mechanic Part LLC. All rights reserved.

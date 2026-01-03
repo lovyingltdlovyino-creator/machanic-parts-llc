@@ -1,0 +1,12 @@
+LOGO UPDATE INSTRUCTIONS
+========================
+
+Please save the blue gear with car logo image as:
+- c:\Users\USER\Desktop\carpartmarket\mechanic_part\web-nextjs\public\logo.png (512x512 PNG)
+- c:\Users\USER\Desktop\carpartmarket\mechanic_part\web-nextjs\app\favicon.ico (convert to ICO format)
+
+The logo has been referenced in the codebase and will display once you add these files.
+
+You can use online tools like:
+- https://convertio.co/png-ico/ to convert PNG to ICO
+- Or use any image editing software to create the favicon.ico file

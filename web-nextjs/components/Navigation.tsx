@@ -84,6 +84,12 @@ export function Navigation() {
 
             {user && (
               <>
+                <Link href="/" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                  Browse
+                </Link>
+                <Link href="/blog" className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                  Blog
+                </Link>
                 <Link
                   href="/chat"
                   className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium ${
