@@ -19,9 +19,49 @@ CREATE POLICY "Anyone can view active ads"
   ON ads FOR SELECT
   USING (active = true);
 
--- Policy: Only admins can manage ads
-CREATE POLICY "Admins can manage ads"
-  ON ads FOR ALL
+-- Policy: Admins can view all ads
+CREATE POLICY "Admins can view all ads"
+  ON ads FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Policy: Admins can insert ads
+CREATE POLICY "Admins can insert ads"
+  ON ads FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Policy: Admins can update ads
+CREATE POLICY "Admins can update ads"
+  ON ads FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Policy: Admins can delete ads
+CREATE POLICY "Admins can delete ads"
+  ON ads FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM profiles
@@ -71,9 +111,49 @@ CREATE POLICY "Anyone can view published blog posts"
   ON blog_posts FOR SELECT
   USING (published = true);
 
--- Only admins can manage blog posts
-CREATE POLICY "Admins can manage blog posts"
-  ON blog_posts FOR ALL
+-- Admins can view all blog posts
+CREATE POLICY "Admins can view all blog posts"
+  ON blog_posts FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Admins can insert blog posts
+CREATE POLICY "Admins can insert blog posts"
+  ON blog_posts FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Admins can update blog posts
+CREATE POLICY "Admins can update blog posts"
+  ON blog_posts FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Admins can delete blog posts
+CREATE POLICY "Admins can delete blog posts"
+  ON blog_posts FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM profiles
@@ -89,8 +169,35 @@ CREATE POLICY "Anyone can view categories"
   USING (true);
 
 -- Admins can manage categories
-CREATE POLICY "Admins can manage categories"
-  ON blog_categories FOR ALL
+CREATE POLICY "Admins can insert categories"
+  ON blog_categories FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+CREATE POLICY "Admins can update categories"
+  ON blog_categories FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+CREATE POLICY "Admins can delete categories"
+  ON blog_categories FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM profiles
@@ -106,8 +213,18 @@ CREATE POLICY "Anyone can view post categories"
   USING (true);
 
 -- Admins can manage post-category associations
-CREATE POLICY "Admins can manage post categories"
-  ON blog_post_categories FOR ALL
+CREATE POLICY "Admins can insert post categories"
+  ON blog_post_categories FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+CREATE POLICY "Admins can delete post categories"
+  ON blog_post_categories FOR DELETE
   USING (
     EXISTS (
       SELECT 1 FROM profiles
