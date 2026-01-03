@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function ChatPage() {
+function ChatPageContent() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [conversations, setConversations] = useState<any[]>([])
@@ -231,5 +231,17 @@ export default function ChatPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    }>
+      <ChatPageContent />
+    </Suspense>
   )
 }
