@@ -41,9 +41,11 @@ export function Footer() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex flex-col items-center space-y-6">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">MP</span>
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="Mechanic Part LLC" 
+              className="w-10 h-10 object-contain"
+            />
             <span className="font-semibold text-gray-900">Mechanic Part LLC</span>
           </div>
 

@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Mechanic Part LLC - Find Quality Auto Parts",
   description: "Browse thousands of auto parts listings from verified sellers across the country",
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({

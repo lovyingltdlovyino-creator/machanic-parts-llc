@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Users, Store, ShoppingBag, DollarSign, Star, Shield, Activity, RefreshCw, Search } from 'lucide-react'
+import { Users, Store, ShoppingBag, DollarSign, Star, Shield, Activity, RefreshCw, Search, FileText, Image } from 'lucide-react'
 
 interface Metrics {
   total_users?: number
@@ -277,22 +277,58 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === 'dashboard' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <MetricCard icon={Users} label="Total Users" value={metrics.total_users || 0} />
-            <MetricCard icon={Store} label="Sellers" value={metrics.sellers || 0} />
-            <MetricCard icon={Users} label="Buyers" value={metrics.buyers || 0} />
-            <MetricCard icon={Shield} label="Admins" value={metrics.admins || 0} />
-            <MetricCard icon={Activity} label="Active Listings" value={metrics.active_listings || 0} />
-            <MetricCard icon={Star} label="Featured Listings" value={metrics.featured_listings || 0} color="text-yellow-600" />
-            <MetricCard icon={ShoppingBag} label="Paid Subscribers" value={metrics.paid_subscribers || 0} color="text-green-600" />
-            <MetricCard icon={Shield} label="Blocked Users" value={metrics.blocked_users || 0} color="text-red-600" />
-            <MetricCard 
-              icon={DollarSign} 
-              label="Est. MRR (USD)" 
-              value={`$${((metrics.estimated_mrr_usd || 0) / 100).toFixed(2)}`} 
-              color="text-green-600" 
-            />
-          </div>
+          <>
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <button
+                onClick={() => router.push('/admin/blog')}
+                className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">Manage Blog Posts</h3>
+                    <p className="text-sm text-gray-600">Create and manage blog content</p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => router.push('/admin/ads')}
+                className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-left border-2 border-transparent hover:border-blue-500"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Image className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-lg">Manage Ads</h3>
+                    <p className="text-sm text-gray-600">Create and manage sidebar advertisements</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <MetricCard icon={Users} label="Total Users" value={metrics.total_users || 0} />
+              <MetricCard icon={Store} label="Sellers" value={metrics.sellers || 0} />
+              <MetricCard icon={Users} label="Buyers" value={metrics.buyers || 0} />
+              <MetricCard icon={Shield} label="Admins" value={metrics.admins || 0} />
+              <MetricCard icon={Activity} label="Active Listings" value={metrics.active_listings || 0} />
+              <MetricCard icon={Star} label="Featured Listings" value={metrics.featured_listings || 0} color="text-yellow-600" />
+              <MetricCard icon={ShoppingBag} label="Paid Subscribers" value={metrics.paid_subscribers || 0} color="text-green-600" />
+              <MetricCard icon={Shield} label="Blocked Users" value={metrics.blocked_users || 0} color="text-red-600" />
+              <MetricCard 
+                icon={DollarSign} 
+                label="Est. MRR (USD)" 
+                value={`$${((metrics.estimated_mrr_usd || 0) / 100).toFixed(2)}`} 
+                color="text-green-600" 
+              />
+            </div>
+          </>
         )}
 
         {activeTab === 'users' && (
