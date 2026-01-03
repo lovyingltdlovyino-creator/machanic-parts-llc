@@ -14,6 +14,13 @@ CREATE TABLE IF NOT EXISTS ads (
 -- Enable RLS
 ALTER TABLE ads ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view active ads" ON ads;
+DROP POLICY IF EXISTS "Admins can view all ads" ON ads;
+DROP POLICY IF EXISTS "Admins can insert ads" ON ads;
+DROP POLICY IF EXISTS "Admins can update ads" ON ads;
+DROP POLICY IF EXISTS "Admins can delete ads" ON ads;
+
 -- Policy: Anyone can view active ads
 CREATE POLICY "Anyone can view active ads"
   ON ads FOR SELECT
@@ -105,6 +112,20 @@ CREATE TABLE IF NOT EXISTS blog_post_categories (
 ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE blog_post_categories ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing blog policies if they exist
+DROP POLICY IF EXISTS "Anyone can view published blog posts" ON blog_posts;
+DROP POLICY IF EXISTS "Admins can view all blog posts" ON blog_posts;
+DROP POLICY IF EXISTS "Admins can insert blog posts" ON blog_posts;
+DROP POLICY IF EXISTS "Admins can update blog posts" ON blog_posts;
+DROP POLICY IF EXISTS "Admins can delete blog posts" ON blog_posts;
+DROP POLICY IF EXISTS "Anyone can view categories" ON blog_categories;
+DROP POLICY IF EXISTS "Admins can insert categories" ON blog_categories;
+DROP POLICY IF EXISTS "Admins can update categories" ON blog_categories;
+DROP POLICY IF EXISTS "Admins can delete categories" ON blog_categories;
+DROP POLICY IF EXISTS "Anyone can view post categories" ON blog_post_categories;
+DROP POLICY IF EXISTS "Admins can insert post categories" ON blog_post_categories;
+DROP POLICY IF EXISTS "Admins can delete post categories" ON blog_post_categories;
 
 -- Blog policies: Anyone can view published posts
 CREATE POLICY "Anyone can view published blog posts"
