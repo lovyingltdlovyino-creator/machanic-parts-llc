@@ -1904,8 +1904,9 @@ class _BrowsePageState extends State<BrowsePage> {
       // Get total count
       final countResp = await Supabase.instance.client
           .from('listings_ranked')
-          .select('id', const FetchOptions(count: CountOption.exact, head: true));
-      _totalCount = countResp.count ?? 0;
+          .select('id')
+          .count(CountOption.exact);
+      _totalCount = countResp.count;
 
       // Fetch paginated listings
       final offset = (_currentPage - 1) * _itemsPerPage;
