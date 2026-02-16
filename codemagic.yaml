@@ -20,6 +20,8 @@ workflows:
         XCODE_SCHEME: Runner
         # Explicitly set the iOS deployment target
         IOS_DEPLOYMENT_TARGET: "13.0"
+        # Pass dart-define arguments to flutter build commands
+        FLUTTER_BUILD_ARGS: "--dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY --dart-define=REVENUECAT_IOS_PUBLIC_SDK_KEY=$REVENUECAT_IOS_PUBLIC_SDK_KEY"
     triggering:
       events:
         - push
@@ -36,12 +38,13 @@ workflows:
       - name: Create .env from CI variables
         script: |
           echo "Creating .env for Flutter asset bundling"
-          {
-            [ -n "${SUPABASE_URL:-}" ] && echo "SUPABASE_URL=${SUPABASE_URL}";
-            [ -n "${SUPABASE_ANON_KEY:-}" ] && echo "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}";
-            [ -n "${REVENUECAT_IOS_PUBLIC_SDK_KEY:-}" ] && echo "REVENUECAT_IOS_PUBLIC_SDK_KEY=${REVENUECAT_IOS_PUBLIC_SDK_KEY}";
-          } > .env
-          echo ".env created"
+          echo "SUPABASE_URL=$SUPABASE_URL" > .env
+          echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+          echo "REVENUECAT_IOS_PUBLIC_SDK_KEY=$REVENUECAT_IOS_PUBLIC_SDK_KEY" >> .env
+          echo ".env created with contents:"
+          cat .env
+          echo "Verifying .env is in project root:"
+          ls -la .env
       - name: Generate launcher icons (idempotent)
         script: dart run flutter_launcher_icons
       - name: Generate native splash (idempotent)
