@@ -12,7 +12,10 @@ workflows:
         - supabase_env            # SUPABASE_URL, SUPABASE_ANON_KEY
         - app_store_connect       # APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID
         - revenuecat_env          # REVENUECAT_IOS_PUBLIC_SDK_KEY
-        # Optionally: ios_signing  # If you prefer manual signing (CERT, CERT_PASSWORD, PROVISIONING_PROFILE)
+      # Use certificates/profiles from Codemagic's Code signing identities
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.mechanicpart.mechanicPart
       vars:
         BUNDLE_ID: com.mechanicpart.mechanicPart
         XCODE_WORKSPACE: ios/Runner.xcworkspace
