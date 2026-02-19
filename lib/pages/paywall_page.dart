@@ -28,6 +28,58 @@ class _PaywallPageState extends State<PaywallPage> {
     return 'Other';
   }
 
+  // Subscription tier benefits - clearly describe what users get
+  static const Map<String, Map<String, dynamic>> _tierBenefits = {
+    'Basic': {
+      'emoji': '⭐',
+      'tagline': 'Perfect for getting started',
+      'benefits': [
+        'Up to 5 active listings',
+        '2x more visibility than free',
+        'Standard search placement',
+        'Community access',
+      ],
+    },
+    'Premium': {
+      'emoji': '✨',
+      'tagline': 'Best for growing sellers',
+      'benefits': [
+        'Up to 20 active listings',
+        '5x more visibility',
+        '2 monthly boosts included',
+        '1 featured slot',
+        'Basic analytics dashboard',
+      ],
+    },
+    'VIP': {
+      'emoji': '👑',
+      'tagline': 'For serious sellers',
+      'benefits': [
+        'Up to 50 active listings',
+        '7x more visibility',
+        '5 monthly boosts included',
+        '3 featured slots',
+        'Advanced analytics',
+        'Lead generation access',
+        'Bulk upload tools',
+      ],
+    },
+    'VIP Gold': {
+      'emoji': '🥇',
+      'tagline': 'Maximum exposure & features',
+      'benefits': [
+        'Up to 100 active listings',
+        '10x more visibility',
+        'Unlimited monthly boosts',
+        '10 featured slots',
+        'Priority search placement',
+        'Advanced analytics',
+        'Lead generation access',
+        'Priority support',
+      ],
+    },
+  };
+
   // Entitlement id per tier based on your dashboard screenshot
   String? _entitlementForTier(String tier) {
     switch (tier) {
@@ -321,15 +373,53 @@ class _PaywallPageState extends State<PaywallPage> {
                       for (final tier in sortedTiers) {
                         final ent = _entitlementForTier(tier);
                         final hasActive = ent != null && activeEntitlements.contains(ent);
+                        final tierInfo = _tierBenefits[tier];
+                        final emoji = tierInfo?['emoji'] ?? '';
+                        final tagline = tierInfo?['tagline'] ?? '';
+                        final benefits = (tierInfo?['benefits'] as List<String>?) ?? [];
 
-                        widgets.add(Row(
-                          children: [
-                            Text(tier, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                            if (hasActive) ...[
-                              const SizedBox(width: 8),
-                              Chip(label: const Text('Active'), backgroundColor: Colors.green.shade100),
+                        // Tier header with emoji and tagline
+                        widgets.add(Container(
+                          margin: const EdgeInsets.only(top: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: hasActive ? Colors.green.shade50 : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text('$emoji $tier', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                                  if (hasActive) ...[
+                                    const SizedBox(width: 8),
+                                    Chip(label: const Text('Active'), backgroundColor: Colors.green.shade200),
+                                  ],
+                                ],
+                              ),
+                              if (tagline.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(tagline, style: TextStyle(fontSize: 14, color: Colors.grey.shade700, fontStyle: FontStyle.italic)),
+                              ],
+                              if (benefits.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                const Text('What you get:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 4),
+                                ...benefits.map((b) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 2),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                      const SizedBox(width: 6),
+                                      Expanded(child: Text(b, style: const TextStyle(fontSize: 13))),
+                                    ],
+                                  ),
+                                )),
+                              ],
                             ],
-                          ],
+                          ),
                         ));
                         widgets.add(const SizedBox(height: 8));
 
@@ -346,10 +436,22 @@ class _PaywallPageState extends State<PaywallPage> {
                           final String title = (product.title ?? '').toString();
                           final String price = (product.priceString ?? '').toString();
                           final String pid = (product.identifier ?? product.productIdentifier ?? '').toString();
+                          // Extract duration from product ID for clearer display
+                          String duration = '';
+                          final pidLower = pid.toLowerCase();
+                          if (pidLower.contains('monthly') || pidLower.contains('month1')) {
+                            duration = 'Monthly';
+                          } else if (pidLower.contains('quarterly') || pidLower.contains('3month')) {
+                            duration = 'Quarterly (3 months)';
+                          } else if (pidLower.contains('6month')) {
+                            duration = '6 Months';
+                          } else if (pidLower.contains('yearly') || pidLower.contains('annual')) {
+                            duration = 'Yearly';
+                          }
                           return Card(
                             child: ListTile(
-                              title: Text(title.isNotEmpty ? title : pid),
-                              subtitle: Text('$pid  •  $price'),
+                              title: Text(duration.isNotEmpty ? '$tier $duration' : (title.isNotEmpty ? title : pid)),
+                              subtitle: Text(price),
                               trailing: ElevatedButton(
                                 onPressed: hasActive ? null : () => _purchase(pkg),
                                 child: Text(hasActive ? 'Active' : 'Buy'),
