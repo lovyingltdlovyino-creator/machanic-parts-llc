@@ -24,10 +24,10 @@ class _BillingPageState extends State<BillingPage> {
 
   // Monthly USD prices (display only). Multi-month discounts: 3m -5%, 6m -10%, 12m -15%.
   final Map<String, double> _monthlyUsd = const {
-    'basic': 15.0,
-    'premium': 30.0,
-    'vip': 46.0,
-    'vip_gold': 59.0,
+    'basic': 4.99,
+    'premium': 9.99,
+    'vip': 14.99,
+    'vip_gold': 24.99,
   };
 
   final List<Map<String, dynamic>> _planDefs = const [
