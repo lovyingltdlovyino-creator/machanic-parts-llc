@@ -2,7 +2,7 @@ name: mechanic_part
 description: "Car and spare parts marketplace app"
 publish_to: 'none'
 
-version: 1.2.14+14
+version: 1.2.16+16
 
 environment:
   sdk: ^3.5.4
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  google_fonts: 8.0.1
+  google_fonts: 6.3.1
   flutter_animate: ^4.5.0
   flutter_native_splash: ^2.4.1
   flutter_dotenv: ^5.2.1
@@ -61,4 +61,3 @@ flutter_launcher_icons:
   adaptive_icon_background: "#1E3A8A"
   adaptive_icon_foreground: "assets/images/app_icon.png"
   remove_alpha_ios: true
-

@@ -25,9 +25,13 @@ import 'pages/terms_page.dart';
 import 'pages/reset_password_page.dart';
 import 'pages/categories_page.dart';
 
-const String kSupabaseUrlFromDefine = String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-const String kSupabaseAnonFromDefine = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
-const String kRevenuecatIosKeyFromDefine = String.fromEnvironment('REVENUECAT_IOS_PUBLIC_SDK_KEY', defaultValue: '');
+const String kSupabaseUrlFromDefine =
+    String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+const String kSupabaseAnonFromDefine =
+    String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: '');
+const String kRevenuecatIosKeyFromDefine =
+    String.fromEnvironment('REVENUECAT_IOS_PUBLIC_SDK_KEY', defaultValue: '');
+
 // A simple error screen to show fatal errors instead of a blank page (used on web too)
 class ErrorScreen extends StatelessWidget {
   final String error;
@@ -43,7 +47,9 @@ class ErrorScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Something went wrong', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                const Text('Something went wrong',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 12),
                 Text(error, textAlign: TextAlign.center),
               ],
@@ -57,7 +63,7 @@ class ErrorScreen extends StatelessWidget {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Enable clean URLs without hash for web only (doesn't affect iOS/Android)
   if (kIsWeb) {
     usePathUrlStrategy();
@@ -85,7 +91,7 @@ Future<void> main() async {
       child: Center(child: Text('Error: ${details.exceptionAsString()}')),
     );
   };
-  
+
   // Load environment variables (optional). Skip on Web to avoid fetching assets/.env
   if (!kIsWeb) {
     try {
@@ -95,23 +101,26 @@ Future<void> main() async {
     }
     // ErrorScreen moved to top-level
   }
-  
+
   // Read from --dart-define first; fallback to .env only if dotenv is initialized
   final supabaseUrl = (kSupabaseUrlFromDefine.isNotEmpty
-          ? kSupabaseUrlFromDefine
-          : (dotenv.isInitialized ? dotenv.env['SUPABASE_URL'] : null))
-      ?.trim() ?? '';
+              ? kSupabaseUrlFromDefine
+              : (dotenv.isInitialized ? dotenv.env['SUPABASE_URL'] : null))
+          ?.trim() ??
+      '';
   final supabaseAnonKey = (kSupabaseAnonFromDefine.isNotEmpty
-          ? kSupabaseAnonFromDefine
-          : (dotenv.isInitialized ? dotenv.env['SUPABASE_ANON_KEY'] : null))
-      ?.trim() ?? '';
+              ? kSupabaseAnonFromDefine
+              : (dotenv.isInitialized ? dotenv.env['SUPABASE_ANON_KEY'] : null))
+          ?.trim() ??
+      '';
   // Minimal debug prints (no secrets)
   try {
     final host = Uri.tryParse(supabaseUrl)?.host ?? '';
     // ignore: avoid_print
-    print('[Init] isWeb=$kIsWeb supabaseHost=$host anonLen=${supabaseAnonKey.length}');
+    print(
+        '[Init] isWeb=$kIsWeb supabaseHost=$host anonLen=${supabaseAnonKey.length}');
   } catch (_) {}
-  
+
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
     runApp(MaterialApp(
       home: Scaffold(
@@ -121,10 +130,12 @@ Future<void> main() async {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: const [
-                Text('Missing configuration', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                Text('Missing configuration',
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                 SizedBox(height: 12),
                 Text(
-                  'SUPABASE_URL or SUPABASE_ANON_KEY is not provided.\n' 
+                  'SUPABASE_URL or SUPABASE_ANON_KEY is not provided.\n'
                   'On Netlify, set them in Site → Build & deploy → Environment and redeploy.',
                   textAlign: TextAlign.center,
                 ),
@@ -164,13 +175,15 @@ Future<void> main() async {
       }
     });
   } catch (_) {}
-  
+
   // Initialize notification service (skip during screenshot builds)
-  const skipNotifications = String.fromEnvironment('SKIP_NOTIFICATIONS', defaultValue: 'false');
+  const skipNotifications =
+      String.fromEnvironment('SKIP_NOTIFICATIONS', defaultValue: 'false');
   if (skipNotifications != 'true') {
     // ignore: avoid_print
     print('[Init] Init NotificationService');
     await NotificationService().initialize();
+    await NotificationService().syncPushToken();
     // ignore: avoid_print
     print('[Init] NotificationService initialized');
   } else {
@@ -185,7 +198,9 @@ Future<void> main() async {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       final rcKey = (kRevenuecatIosKeyFromDefine.isNotEmpty
               ? kRevenuecatIosKeyFromDefine
-              : (dotenv.isInitialized ? (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '') : ''))
+              : (dotenv.isInitialized
+                  ? (dotenv.env['REVENUECAT_IOS_PUBLIC_SDK_KEY'] ?? '')
+                  : ''))
           .trim();
       if (rcKey.isEmpty) {
         // ignore: avoid_print
@@ -227,21 +242,20 @@ Future<void> main() async {
     runApp(ErrorScreen(error: 'Boot error: $e'));
     return;
   }
-  runZonedGuarded(() {
-    try {
-      // ignore: avoid_print
-      print('[Init] runApp start');
-      runApp(const MechanicPartApp());
-    } catch (e) {
-      // ignore: avoid_print
-      print('runApp sync error: $e');
-      // Do not replace the app; keep running.
-    }
-  }, (error, stack) {
-    // ignore: avoid_print
-    print('Uncaught zone error: $error');
-    // Keep the app running to avoid full-screen crash on transient errors.
+
+  Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+    await NotificationService().handleAuthStateChange(data.event, data.session);
   });
+
+  try {
+    // ignore: avoid_print
+    print('[Init] runApp start');
+    runApp(const MechanicPartApp());
+  } catch (e) {
+    // ignore: avoid_print
+    print('runApp sync error: $e');
+    runApp(ErrorScreen(error: 'runApp error: $e'));
+  }
 }
 
 // Branding
@@ -290,11 +304,14 @@ final _router = GoRouter(
     ),
     GoRoute(
       path: '/home',
-      builder: (context, state) => kIsWeb ? const WebHomeShell() : const HomeShell(),
+      builder: (context, state) =>
+          kIsWeb ? const WebHomeShell() : const HomeShell(),
     ),
     GoRoute(
       path: '/my-products',
-      builder: (context, state) => kIsWeb ? const WebHomeShell(initialIndex: 1) : const HomeShell(initialIndex: 1),
+      builder: (context, state) => kIsWeb
+          ? const WebHomeShell(initialIndex: 1)
+          : const HomeShell(initialIndex: 1),
     ),
     GoRoute(
       path: '/auth',
@@ -375,11 +392,20 @@ class _SellerOnlyState extends State<_SellerOnly> {
           .select('user_type')
           .eq('id', user.id)
           .maybeSingle();
-      final type = (prof != null ? prof['user_type'] : null) ?? (user.userMetadata?['user_type'] ?? 'buyer');
-      if (mounted) setState(() { _allowed = type == 'seller'; _loading = false; });
+      final type = (prof != null ? prof['user_type'] : null) ??
+          (user.userMetadata?['user_type'] ?? 'buyer');
+      if (mounted)
+        setState(() {
+          _allowed = type == 'seller';
+          _loading = false;
+        });
     } catch (_) {
       final type = user.userMetadata?['user_type'] ?? 'buyer';
-      if (mounted) setState(() { _allowed = type == 'seller'; _loading = false; });
+      if (mounted)
+        setState(() {
+          _allowed = type == 'seller';
+          _loading = false;
+        });
     }
   }
 
@@ -400,11 +426,13 @@ class _SellerOnlyState extends State<_SellerOnly> {
           children: [
             const Icon(Icons.info_outline, size: 40, color: Colors.orange),
             const SizedBox(height: 12),
-            const Text('Billing is available to sellers only.', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Billing is available to sellers only.',
+                style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () {
-                final homeShell = context.findAncestorStateOfType<_HomeShellState>();
+                final homeShell =
+                    context.findAncestorStateOfType<_HomeShellState>();
                 if (homeShell != null) {
                   homeShell.switchToTab(3); // Profile tab
                 } else {
@@ -413,7 +441,9 @@ class _SellerOnlyState extends State<_SellerOnly> {
               },
               icon: const Icon(Icons.person_outline),
               label: const Text('Go to Profile'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white),
             )
           ],
         ),
@@ -493,13 +523,13 @@ class _SplashScreenState extends State<SplashScreen> {
                     },
                   ),
                 ).animate().fadeIn(duration: 800.ms).scale(
-                  begin: const Offset(0.8, 0.8), 
-                  end: const Offset(1.0, 1.0), 
-                  curve: Curves.elasticOut,
-                ),
-                
+                      begin: const Offset(0.8, 0.8),
+                      end: const Offset(1.0, 1.0),
+                      curve: Curves.elasticOut,
+                    ),
+
                 const SizedBox(height: 32),
-                
+
                 // App title with elegant styling
                 Text(
                   'MECHANIC PART LLC',
@@ -518,16 +548,17 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(
-                  begin: 0.3, 
-                  end: 0, 
-                  curve: Curves.easeOut,
-                ),
-                
+                      begin: 0.3,
+                      end: 0,
+                      curve: Curves.easeOut,
+                    ),
+
                 const SizedBox(height: 12),
-                
+
                 // Subtitle with refined styling
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(25),
@@ -543,13 +574,13 @@ class _SplashScreenState extends State<SplashScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ).animate().fadeIn(delay: 600.ms, duration: 600.ms).slideY(
-                  begin: 0.2, 
-                  end: 0, 
-                  curve: Curves.easeOut,
-                ),
-                
+                      begin: 0.2,
+                      end: 0,
+                      curve: Curves.easeOut,
+                    ),
+
                 const SizedBox(height: 40),
-                
+
                 // Loading indicator with custom styling
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -579,7 +610,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
 class HomeShell extends StatefulWidget {
   final int initialIndex;
-  
+
   const HomeShell({super.key, this.initialIndex = 0});
 
   @override
@@ -609,8 +640,8 @@ class _HomeShellState extends State<HomeShell> {
           .eq('id', user.id)
           .maybeSingle();
       final type = (profile != null && profile['user_type'] != null)
-        ? profile['user_type']
-        : (user.userMetadata?['user_type'] ?? 'buyer');
+          ? profile['user_type']
+          : (user.userMetadata?['user_type'] ?? 'buyer');
       setState(() {
         _isSeller = type == 'seller';
         _loadedUserType = true;
@@ -620,7 +651,9 @@ class _HomeShellState extends State<HomeShell> {
       });
     } catch (_) {
       // Fallback to auth metadata if profiles query/column is unavailable
-      final metaType = Supabase.instance.client.auth.currentUser?.userMetadata?['user_type'] ?? 'buyer';
+      final metaType = Supabase
+              .instance.client.auth.currentUser?.userMetadata?['user_type'] ??
+          'buyer';
       setState(() {
         _isSeller = metaType == 'seller';
         _loadedUserType = true;
@@ -653,14 +686,17 @@ class _HomeShellState extends State<HomeShell> {
     }
 
     try {
-      final resp = await Supabase.instance.client
-          .rpc('get_conversations_with_details', params: {'user_uuid': user.id});
+      final resp = await Supabase.instance.client.rpc(
+          'get_conversations_with_details',
+          params: {'user_uuid': user.id});
       final list = List<Map<String, dynamic>>.from(resp ?? []);
       int total = 0;
       final ids = <dynamic>{};
       for (final c in list) {
         final uc = c['unread_count'];
-        if (uc is int) total += uc; else if (uc is String) total += int.tryParse(uc) ?? 0;
+        if (uc is int)
+          total += uc;
+        else if (uc is String) total += int.tryParse(uc) ?? 0;
         final cid = c['conversation_id'] ?? c['id'];
         if (cid != null) ids.add(cid);
       }
@@ -722,7 +758,9 @@ class _HomeShellState extends State<HomeShell> {
               if (newR == null) return;
               final user = Supabase.instance.client.auth.currentUser;
               if (user == null) return;
-              if ((oldR?['read_at'] == null) && (newR['read_at'] != null) && newR['sender_id'] != user.id) {
+              if ((oldR?['read_at'] == null) &&
+                  (newR['read_at'] != null) &&
+                  newR['sender_id'] != user.id) {
                 if (mounted) {
                   setState(() {
                     _unreadCount = (_unreadCount - 1).clamp(0, 1 << 31);
@@ -754,7 +792,8 @@ class _HomeShellState extends State<HomeShell> {
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
         textAlign: TextAlign.center,
       ),
     );
@@ -789,35 +828,42 @@ class _HomeShellState extends State<HomeShell> {
 
     final List<BottomNavigationBarItem> items = _isSeller
         ? [
-            const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
-            const BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'My Products'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.search), label: 'Browse'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.inventory_2), label: 'My Products'),
             BottomNavigationBarItem(
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.chat),
                   if (_unreadCount > 0)
-                    Positioned(right: -6, top: -2, child: _buildBadge(_unreadCount)),
+                    Positioned(
+                        right: -6, top: -2, child: _buildBadge(_unreadCount)),
                 ],
               ),
               label: 'Chat',
             ),
-            const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'Profile'),
           ]
         : [
-            const BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.search), label: 'Browse'),
             BottomNavigationBarItem(
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.chat),
                   if (_unreadCount > 0)
-                    Positioned(right: -6, top: -2, child: _buildBadge(_unreadCount)),
+                    Positioned(
+                        right: -6, top: -2, child: _buildBadge(_unreadCount)),
                 ],
               ),
               label: 'Chat',
             ),
-            const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'Profile'),
           ];
 
     final safeIndex = _currentIndex.clamp(0, pages.length - 1);
@@ -859,7 +905,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
   bool _isAdmin = false;
   bool _loadedUserType = false;
   final _searchController = TextEditingController();
-  final GlobalKey<_WebBrowsePageState> _browseKey = GlobalKey<_WebBrowsePageState>();
+  final GlobalKey<_WebBrowsePageState> _browseKey =
+      GlobalKey<_WebBrowsePageState>();
   int _unreadCount = 0;
   final Map<dynamic, RealtimeChannel> _messageChannels = {};
 
@@ -898,7 +945,9 @@ class _WebHomeShellState extends State<WebHomeShell> {
       final type = (profile != null && profile['user_type'] != null)
           ? profile['user_type']
           : (user.userMetadata?['user_type'] ?? 'buyer');
-      final isAdminFlag = profile != null ? profile['is_admin'] : null; // strict: UI shows Admin only if true
+      final isAdminFlag = profile != null
+          ? profile['is_admin']
+          : null; // strict: UI shows Admin only if true
       setState(() {
         _isSeller = type == 'seller';
         _isAdmin = isAdminFlag == true;
@@ -909,7 +958,9 @@ class _WebHomeShellState extends State<WebHomeShell> {
       });
     } catch (_) {
       // Fallback to auth metadata if profiles query/column is unavailable
-      final metaType = Supabase.instance.client.auth.currentUser?.userMetadata?['user_type'] ?? 'buyer';
+      final metaType = Supabase
+              .instance.client.auth.currentUser?.userMetadata?['user_type'] ??
+          'buyer';
       setState(() {
         _isSeller = metaType == 'seller';
         _isAdmin = false;
@@ -933,14 +984,17 @@ class _WebHomeShellState extends State<WebHomeShell> {
       return;
     }
     try {
-      final resp = await Supabase.instance.client
-          .rpc('get_conversations_with_details', params: {'user_uuid': user.id});
+      final resp = await Supabase.instance.client.rpc(
+          'get_conversations_with_details',
+          params: {'user_uuid': user.id});
       final list = List<Map<String, dynamic>>.from(resp ?? []);
       int total = 0;
       final ids = <dynamic>{};
       for (final c in list) {
         final uc = c['unread_count'];
-        if (uc is int) total += uc; else if (uc is String) total += int.tryParse(uc) ?? 0;
+        if (uc is int)
+          total += uc;
+        else if (uc is String) total += int.tryParse(uc) ?? 0;
         final cid = c['conversation_id'] ?? c['id'];
         if (cid != null) ids.add(cid);
       }
@@ -990,7 +1044,9 @@ class _WebHomeShellState extends State<WebHomeShell> {
               final wasUnread = oldR?['read_at'] == null;
               final nowRead = newR['read_at'] != null;
               if (wasUnread && nowRead && newR['sender_id'] != user.id) {
-                if (mounted) setState(() => _unreadCount = (_unreadCount - 1).clamp(0, 1 << 31));
+                if (mounted)
+                  setState(() =>
+                      _unreadCount = (_unreadCount - 1).clamp(0, 1 << 31));
               }
             },
           )
@@ -1017,7 +1073,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
       constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
         textAlign: TextAlign.center,
       ),
     );
@@ -1060,15 +1117,20 @@ class _WebHomeShellState extends State<WebHomeShell> {
       // Mobile-friendly web layout: bottom navigation + footer
       final items = _isSeller
           ? const [
-              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
-              BottomNavigationBarItem(icon: Icon(Icons.inventory_2), label: 'My Products'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.search), label: 'Browse'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.inventory_2), label: 'My Products'),
               BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.person), label: 'Profile'),
             ]
           : const [
-              BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Browse'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.search), label: 'Browse'),
               BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.person), label: 'Profile'),
             ];
 
       return Scaffold(
@@ -1101,35 +1163,42 @@ class _WebHomeShellState extends State<WebHomeShell> {
     // Wide web layout: left rail + footer
     final railDestinations = _isSeller
         ? [
-            const NavigationRailDestination(icon: Icon(Icons.search), label: Text('Browse')),
-            const NavigationRailDestination(icon: Icon(Icons.inventory_2), label: Text('My Products')),
+            const NavigationRailDestination(
+                icon: Icon(Icons.search), label: Text('Browse')),
+            const NavigationRailDestination(
+                icon: Icon(Icons.inventory_2), label: Text('My Products')),
             NavigationRailDestination(
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.chat),
                   if (_unreadCount > 0)
-                    Positioned(right: -6, top: -2, child: _buildBadge(_unreadCount)),
+                    Positioned(
+                        right: -6, top: -2, child: _buildBadge(_unreadCount)),
                 ],
               ),
               label: const Text('Chat'),
             ),
-            const NavigationRailDestination(icon: Icon(Icons.person), label: Text('Profile')),
+            const NavigationRailDestination(
+                icon: Icon(Icons.person), label: Text('Profile')),
           ]
         : [
-            const NavigationRailDestination(icon: Icon(Icons.search), label: Text('Browse')),
+            const NavigationRailDestination(
+                icon: Icon(Icons.search), label: Text('Browse')),
             NavigationRailDestination(
               icon: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   const Icon(Icons.chat),
                   if (_unreadCount > 0)
-                    Positioned(right: -6, top: -2, child: _buildBadge(_unreadCount)),
+                    Positioned(
+                        right: -6, top: -2, child: _buildBadge(_unreadCount)),
                 ],
               ),
               label: const Text('Chat'),
             ),
-            const NavigationRailDestination(icon: Icon(Icons.person), label: Text('Profile')),
+            const NavigationRailDestination(
+                icon: Icon(Icons.person), label: Text('Profile')),
           ];
 
     return Scaffold(
@@ -1153,7 +1222,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.build_rounded, color: Colors.white),
+                      child:
+                          const Icon(Icons.build_rounded, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
                     Text(
@@ -1182,7 +1252,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                         ),
                         filled: true,
                         fillColor: Colors.grey.shade100,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 0),
                       ),
                     ),
                   ),
@@ -1196,7 +1267,10 @@ class _WebHomeShellState extends State<WebHomeShell> {
                     children: [
                       const Icon(Icons.notifications_outlined),
                       if (_unreadCount > 0)
-                        Positioned(right: -4, top: -4, child: _buildBadge(_unreadCount)),
+                        Positioned(
+                            right: -4,
+                            top: -4,
+                            child: _buildBadge(_unreadCount)),
                     ],
                   ),
                   onPressed: () {
@@ -1204,7 +1278,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                     if (user == null) {
                       context.go('/auth');
                     } else {
-                      setState(() => _currentIndex = _isSeller ? 2 : 1); // Go to Chat
+                      setState(() =>
+                          _currentIndex = _isSeller ? 2 : 1); // Go to Chat
                     }
                   },
                 ),
@@ -1219,7 +1294,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                             padding: const EdgeInsets.only(right: 8),
                             child: OutlinedButton.icon(
                               onPressed: () => context.go('/admin'),
-                              icon: const Icon(Icons.admin_panel_settings_outlined),
+                              icon: const Icon(
+                                  Icons.admin_panel_settings_outlined),
                               label: const Text('Admin'),
                             ),
                           ),
@@ -1228,7 +1304,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                             padding: const EdgeInsets.only(right: 8),
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                final user = Supabase.instance.client.auth.currentUser;
+                                final user =
+                                    Supabase.instance.client.auth.currentUser;
                                 if (user == null) {
                                   context.go('/auth');
                                 } else {
@@ -1241,7 +1318,8 @@ class _WebHomeShellState extends State<WebHomeShell> {
                           ),
                         ElevatedButton.icon(
                           onPressed: () {
-                            final user = Supabase.instance.client.auth.currentUser;
+                            final user =
+                                Supabase.instance.client.auth.currentUser;
                             if (user == null) {
                               context.go('/auth');
                             } else {
@@ -1249,11 +1327,15 @@ class _WebHomeShellState extends State<WebHomeShell> {
                             }
                           },
                           icon: const Icon(Icons.person_outline),
-                          label: Text(Supabase.instance.client.auth.currentUser == null ? 'Sign In' : 'Profile'),
+                          label: Text(
+                              Supabase.instance.client.auth.currentUser == null
+                                  ? 'Sign In'
+                                  : 'Profile'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                           ),
                         ),
                       ],
@@ -1330,22 +1412,21 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
           .toList();
 
       if (ids.isEmpty) {
+        if (!mounted) return;
         setState(() => _featuredListings = []);
         return;
       }
 
       // Step 2: load full rows with photos and reorder by ranked ids
-      final details = await Supabase.instance.client
-          .from('listings')
-          .select('''
+      final details = await Supabase.instance.client.from('listings').select('''
             *,
             listing_photos(storage_path, sort_order)
-          ''')
-          .inFilter('id', ids);
+          ''').inFilter('id', ids);
 
       var listings = List<Map<String, dynamic>>.from(details ?? []);
       final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-      listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+      listings.sort((a, b) =>
+          (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
 
       await _loadProfilesForListings(listings);
 
@@ -1354,12 +1435,13 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         final id = it['id'];
         if (id != null) {
           try {
-            await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+            await Supabase.instance.client.rpc('track_event',
+                params: {'_listing_id': id, '_type': 'impression'});
           } catch (_) {}
         }
       }
 
+      if (!mounted) return;
       setState(() {
         _featuredListings = listings;
       });
@@ -1389,18 +1471,17 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
       // Step 2: full listings with photos
       List<Map<String, dynamic>> listings = [];
       if (ids.isNotEmpty) {
-        final details = await Supabase.instance.client
-            .from('listings')
-            .select('''
+        final details =
+            await Supabase.instance.client.from('listings').select('''
               *,
               listing_photos(storage_path, sort_order)
-            ''')
-            .inFilter('id', ids);
+            ''').inFilter('id', ids);
         listings = List<Map<String, dynamic>>.from(details ?? []);
         final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-        listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+        listings.sort((a, b) =>
+            (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
       }
-      
+
       // Load profile data for all listings
       await _loadProfilesForListings(listings);
 
@@ -1409,12 +1490,12 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         final id = it['id'];
         if (id != null) {
           try {
-            await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+            await Supabase.instance.client.rpc('track_event',
+                params: {'_listing_id': id, '_type': 'impression'});
           } catch (_) {}
         }
       }
-      
+
       setState(() {
         _listings = listings;
         _loading = false;
@@ -1427,21 +1508,22 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
     }
   }
 
-  Future<void> _loadProfilesForListings(List<Map<String, dynamic>> listings) async {
+  Future<void> _loadProfilesForListings(
+      List<Map<String, dynamic>> listings) async {
     final ownerIds = listings
         .map((listing) => listing['owner_id']?.toString())
         .where((id) => id != null && !ListingCard._profileCache.containsKey(id))
         .cast<String>()
         .toSet();
-    
+
     if (ownerIds.isEmpty) return;
-    
+
     try {
       final profiles = await Supabase.instance.client
           .from('profiles')
           .select('id, city, state, business_name, contact_person, rating')
           .inFilter('id', ownerIds.toList());
-      
+
       for (final profile in profiles) {
         ListingCard._profileCache[profile['id']] = profile;
       }
@@ -1463,8 +1545,11 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
       dynamic response;
 
       // If ZIP provided, use RPC to compute distances
-      if (filters.containsKey('zip') && filters['zip'] != null && filters['zip'].toString().isNotEmpty) {
-        response = await Supabase.instance.client.rpc('search_listings_by_zip', params: {
+      if (filters.containsKey('zip') &&
+          filters['zip'] != null &&
+          filters['zip'].toString().isNotEmpty) {
+        response = await Supabase.instance.client
+            .rpc('search_listings_by_zip', params: {
           'search_zip': filters['zip'],
           'radius_miles': filters['radius'] ?? 25,
         });
@@ -1481,15 +1566,32 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
 
         // Apply category/condition filters client-side (RPC may not support directly)
         if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
-          results = results.where((e) => (e['type'] ?? '').toString().toLowerCase() == filters['type'].toString().toLowerCase()).toList();
+          results = results
+              .where((e) =>
+                  (e['type'] ?? '').toString().toLowerCase() ==
+                  filters['type'].toString().toLowerCase())
+              .toList();
         }
-        if (filters['category'] != null && filters['category'].toString().isNotEmpty && filters['category'] != 'all') {
-          results = results.where((e) => (e['category'] ?? '').toString().toLowerCase() == filters['category'].toString().toLowerCase()).toList();
+        if (filters['category'] != null &&
+            filters['category'].toString().isNotEmpty &&
+            filters['category'] != 'all') {
+          results = results
+              .where((e) =>
+                  (e['category'] ?? '').toString().toLowerCase() ==
+                  filters['category'].toString().toLowerCase())
+              .toList();
         }
-        if (filters['condition'] != null && filters['condition'].toString().isNotEmpty && filters['condition'] != 'all') {
-          results = results.where((e) => (e['condition'] ?? '').toString().toLowerCase() == filters['condition'].toString().toLowerCase()).toList();
+        if (filters['condition'] != null &&
+            filters['condition'].toString().isNotEmpty &&
+            filters['condition'] != 'all') {
+          results = results
+              .where((e) =>
+                  (e['condition'] ?? '').toString().toLowerCase() ==
+                  filters['condition'].toString().toLowerCase())
+              .toList();
         }
-        if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
+        if (filters['part_name'] != null &&
+            filters['part_name'].toString().isNotEmpty) {
           final q = filters['part_name'].toString().toLowerCase();
           results = results.where((e) {
             final t = (e['title'] ?? '').toString().toLowerCase();
@@ -1499,7 +1601,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         }
 
         // Attach listing_photos for these listing IDs (RPC usually doesn't include nested)
-        final ids = results.map((e) => e['id']).where((id) => id != null).toList();
+        final ids =
+            results.map((e) => e['id']).where((id) => id != null).toList();
         if (ids.isNotEmpty) {
           final photosResp = await Supabase.instance.client
               .from('listing_photos')
@@ -1511,7 +1614,10 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
           for (final p in photos) {
             final lid = p['listing_id'];
             byListing.putIfAbsent(lid, () => []);
-            byListing[lid]!.add({'storage_path': p['storage_path'], 'sort_order': p['sort_order']});
+            byListing[lid]!.add({
+              'storage_path': p['storage_path'],
+              'sort_order': p['sort_order']
+            });
           }
           for (final item in results) {
             item['listing_photos'] = byListing[item['id']] ?? [];
@@ -1525,9 +1631,7 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
       } else {
         // Non-location search (ranked): query IDs from listings_ranked with filters, then hydrate with photos
         final supabase = Supabase.instance.client;
-        var ranked = supabase
-            .from('listings_ranked')
-            .select('id');
+        var ranked = supabase.from('listings_ranked').select('id');
 
         if (filters['type'] != null && filters['type'] != 'all') {
           ranked = ranked.eq('type', filters['type']);
@@ -1539,21 +1643,24 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
         if (filters['condition'] != null && filters['condition'] != 'all') {
           ranked = ranked.eq('condition', filters['condition']);
         }
-        if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
+        if (filters['part_name'] != null &&
+            filters['part_name'].toString().isNotEmpty) {
           final q = filters['part_name'];
           ranked = ranked.or('title.ilike.%$q%,description.ilike.%$q%');
         }
         if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
           ranked = ranked.ilike('make', '%${filters['make']}%');
         }
-        if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
+        if (filters['model'] != null &&
+            filters['model'].toString().isNotEmpty) {
           ranked = ranked.ilike('model', '%${filters['model']}%');
         }
         if (filters['year'] != null) {
           ranked = ranked.eq('year', filters['year']);
         }
 
-        final rankedIdsResp = await ranked.order('score', ascending: false).limit(60);
+        final rankedIdsResp =
+            await ranked.order('score', ascending: false).limit(60);
         final ids = List<Map<String, dynamic>>.from(rankedIdsResp ?? [])
             .map((e) => e['id'])
             .where((e) => e != null)
@@ -1561,23 +1668,23 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
 
         List<Map<String, dynamic>> listings = [];
         if (ids.isNotEmpty) {
-          final details = await supabase
-              .from('listings')
-              .select('''
+          final details = await supabase.from('listings').select('''
                 *,
                 listing_photos(storage_path, sort_order)
-              ''')
-              .inFilter('id', ids);
+              ''').inFilter('id', ids);
           listings = List<Map<String, dynamic>>.from(details ?? []);
           final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-          listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+          listings.sort((a, b) =>
+              (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
           await _loadProfilesForListings(listings);
           // Impressions
           for (final it in listings) {
             final id = it['id'];
             if (id != null) {
-              try { await supabase
-                  .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'}); } catch (_) {}
+              try {
+                await supabase.rpc('track_event',
+                    params: {'_listing_id': id, '_type': 'impression'});
+              } catch (_) {}
             }
           }
         }
@@ -1620,27 +1727,31 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
 
       List<Map<String, dynamic>> listings = [];
       if (ids.isNotEmpty) {
-        final details = await Supabase.instance.client
-            .from('listings')
-            .select('''
+        final details =
+            await Supabase.instance.client.from('listings').select('''
               *,
               listing_photos(storage_path, sort_order)
-            ''')
-            .inFilter('id', ids);
+            ''').inFilter('id', ids);
         listings = List<Map<String, dynamic>>.from(details ?? []);
         final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-        listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+        listings.sort((a, b) =>
+            (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
         await _loadProfilesForListings(listings);
         // Track impressions
         for (final it in listings) {
           final id = it['id'];
           if (id != null) {
-            try { await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'}); } catch (_) {}
+            try {
+              await Supabase.instance.client.rpc('track_event',
+                  params: {'_listing_id': id, '_type': 'impression'});
+            } catch (_) {}
           }
         }
       }
-      setState(() { _listings = listings; _loading = false; });
+      setState(() {
+        _listings = listings;
+        _loading = false;
+      });
     } catch (e) {
       setState(() {
         _error = 'Search failed: $e';
@@ -1669,7 +1780,11 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+                colors: [
+                  Color(0xFF0F2027),
+                  Color(0xFF203A43),
+                  Color(0xFF2C5364)
+                ],
               ),
             ),
             child: Center(
@@ -1713,7 +1828,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 0),
                           ),
                         ),
                       ),
@@ -1744,7 +1860,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
                 children: [
                   Text(
                     'Featured Listings',
-                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                        fontSize: 20, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -1763,7 +1880,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
                     childAspectRatio: 0.85,
                   ),
                   itemCount: _featuredListings.length.clamp(0, 8),
-                  itemBuilder: (context, index) => ListingCard(listing: _featuredListings[index]),
+                  itemBuilder: (context, index) =>
+                      ListingCard(listing: _featuredListings[index]),
                 );
               },
             ),
@@ -1777,9 +1895,14 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
               children: [
                 Text(
                   'Latest Listings',
-                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                      fontSize: 20, fontWeight: FontWeight.w600),
                 ),
-                if (_loading) const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                if (_loading)
+                  const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2)),
               ],
             ),
           ),
@@ -1796,7 +1919,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: cols,
                     crossAxisSpacing: 12,
@@ -1804,7 +1928,8 @@ class _WebBrowsePageState extends State<WebBrowsePage> {
                     childAspectRatio: 0.85,
                   ),
                   itemCount: _listings.length,
-                  itemBuilder: (context, index) => ListingCard(listing: _listings[index]),
+                  itemBuilder: (context, index) =>
+                      ListingCard(listing: _listings[index]),
                 );
               },
             ),
@@ -1859,21 +1984,20 @@ class _BrowsePageState extends State<BrowsePage> {
           .toList();
 
       if (ids.isEmpty) {
+        if (!mounted) return;
         setState(() => _featuredListings = []);
         return;
       }
 
-      final details = await Supabase.instance.client
-          .from('listings')
-          .select('''
+      final details = await Supabase.instance.client.from('listings').select('''
             *,
             listing_photos(storage_path, sort_order)
-          ''')
-          .inFilter('id', ids);
+          ''').inFilter('id', ids);
 
       var listings = List<Map<String, dynamic>>.from(details ?? []);
       final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-      listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+      listings.sort((a, b) =>
+          (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
 
       await _loadProfilesForListings(listings);
 
@@ -1882,13 +2006,16 @@ class _BrowsePageState extends State<BrowsePage> {
         final id = it['id'];
         if (id != null) {
           try {
-            await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+            await Supabase.instance.client.rpc('track_event',
+                params: {'_listing_id': id, '_type': 'impression'});
           } catch (_) {}
         }
       }
 
-      setState(() { _featuredListings = listings; });
+      if (!mounted) return;
+      setState(() {
+        _featuredListings = listings;
+      });
     } catch (e) {
       print('Failed to load featured listings: $e');
     }
@@ -1923,16 +2050,15 @@ class _BrowsePageState extends State<BrowsePage> {
 
       List<Map<String, dynamic>> listings = [];
       if (ids.isNotEmpty) {
-        final details = await Supabase.instance.client
-            .from('listings')
-            .select('''
+        final details =
+            await Supabase.instance.client.from('listings').select('''
               *,
               listing_photos(storage_path, sort_order)
-            ''')
-            .inFilter('id', ids);
+            ''').inFilter('id', ids);
         listings = List<Map<String, dynamic>>.from(details ?? []);
         final order = {for (var i = 0; i < ids.length; i++) ids[i]: i};
-        listings.sort((a, b) => (order[a['id']] ?? 1<<30).compareTo(order[b['id']] ?? 1<<30));
+        listings.sort((a, b) =>
+            (order[a['id']] ?? 1 << 30).compareTo(order[b['id']] ?? 1 << 30));
       }
 
       await _loadProfilesForListings(listings);
@@ -1941,8 +2067,10 @@ class _BrowsePageState extends State<BrowsePage> {
       for (final it in listings) {
         final id = it['id'];
         if (id != null) {
-          try { await Supabase.instance.client
-              .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'}); } catch (_) {}
+          try {
+            await Supabase.instance.client.rpc('track_event',
+                params: {'_listing_id': id, '_type': 'impression'});
+          } catch (_) {}
         }
       }
 
@@ -1962,21 +2090,22 @@ class _BrowsePageState extends State<BrowsePage> {
     }
   }
 
-  Future<void> _loadProfilesForListings(List<Map<String, dynamic>> listings) async {
+  Future<void> _loadProfilesForListings(
+      List<Map<String, dynamic>> listings) async {
     final ownerIds = listings
         .map((listing) => listing['owner_id']?.toString())
         .where((id) => id != null && !ListingCard._profileCache.containsKey(id))
         .cast<String>()
         .toSet();
-    
+
     if (ownerIds.isEmpty) return;
-    
+
     try {
       final profiles = await Supabase.instance.client
           .from('profiles')
           .select('id, city, state, business_name, contact_person, rating')
           .inFilter('id', ownerIds.toList());
-      
+
       for (final profile in profiles) {
         ListingCard._profileCache[profile['id']] = profile;
       }
@@ -1999,39 +2128,45 @@ class _BrowsePageState extends State<BrowsePage> {
     try {
       dynamic response;
 
-      if (filters.containsKey('zip') && filters['zip'] != null && filters['zip'].toString().isNotEmpty) {
+      if (filters.containsKey('zip') &&
+          filters['zip'] != null &&
+          filters['zip'].toString().isNotEmpty) {
         // Location-based search using RPC
-        response = await Supabase.instance.client.rpc('search_listings_by_zip', params: {
+        response = await Supabase.instance.client
+            .rpc('search_listings_by_zip', params: {
           'search_zip': filters['zip'],
           'radius_miles': filters['radius'] ?? 25,
         });
       } else {
         // General search using direct query (include nested photos)
-        var query = Supabase.instance.client
-            .from('listings')
-            .select('''
+        var query = Supabase.instance.client.from('listings').select('''
               *,
               listing_photos(storage_path, sort_order)
-            ''')
-            .eq('status', 'active');
+            ''').eq('status', 'active');
 
         // Apply filters
-        if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
-          query = query.or('title.ilike.%${filters['part_name']}%,description.ilike.%${filters['part_name']}%');
+        if (filters['part_name'] != null &&
+            filters['part_name'].toString().isNotEmpty) {
+          query = query.or(
+              'title.ilike.%${filters['part_name']}%,description.ilike.%${filters['part_name']}%');
         }
         if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
           query = query.eq('type', filters['type']);
         }
-        if (filters['category'] != null && filters['category'].toString().isNotEmpty) {
+        if (filters['category'] != null &&
+            filters['category'].toString().isNotEmpty) {
           query = query.eq('category', filters['category']);
         }
-        if (filters['condition'] != null && filters['condition'].toString().isNotEmpty && filters['condition'] != 'all') {
+        if (filters['condition'] != null &&
+            filters['condition'].toString().isNotEmpty &&
+            filters['condition'] != 'all') {
           query = query.eq('condition', filters['condition']);
         }
         if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
           query = query.ilike('make', '%${filters['make']}%');
         }
-        if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
+        if (filters['model'] != null &&
+            filters['model'].toString().isNotEmpty) {
           query = query.ilike('model', '%${filters['model']}%');
         }
         if (filters['year'] != null) {
@@ -2046,8 +2181,8 @@ class _BrowsePageState extends State<BrowsePage> {
           final id = it['id'];
           if (id != null) {
             try {
-              await Supabase.instance.client
-                  .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+              await Supabase.instance.client.rpc('track_event',
+                  params: {'_listing_id': id, '_type': 'impression'});
             } catch (_) {}
           }
         }
@@ -2075,23 +2210,31 @@ class _BrowsePageState extends State<BrowsePage> {
       // Apply optional filters client-side
       if (filters['type'] != null && filters['type'].toString().isNotEmpty) {
         loaded = loaded
-            .where((e) => (e['type'] ?? '').toString().toLowerCase() ==
+            .where((e) =>
+                (e['type'] ?? '').toString().toLowerCase() ==
                 filters['type'].toString().toLowerCase())
             .toList();
       }
-      if (filters['category'] != null && filters['category'].toString().isNotEmpty && filters['category'] != 'all') {
+      if (filters['category'] != null &&
+          filters['category'].toString().isNotEmpty &&
+          filters['category'] != 'all') {
         loaded = loaded
-            .where((e) => (e['category'] ?? '').toString().toLowerCase() ==
+            .where((e) =>
+                (e['category'] ?? '').toString().toLowerCase() ==
                 filters['category'].toString().toLowerCase())
             .toList();
       }
-      if (filters['condition'] != null && filters['condition'].toString().isNotEmpty && filters['condition'] != 'all') {
+      if (filters['condition'] != null &&
+          filters['condition'].toString().isNotEmpty &&
+          filters['condition'] != 'all') {
         loaded = loaded
-            .where((e) => (e['condition'] ?? '').toString().toLowerCase() ==
+            .where((e) =>
+                (e['condition'] ?? '').toString().toLowerCase() ==
                 filters['condition'].toString().toLowerCase())
             .toList();
       }
-      if (filters['part_name'] != null && filters['part_name'].toString().isNotEmpty) {
+      if (filters['part_name'] != null &&
+          filters['part_name'].toString().isNotEmpty) {
         final q = filters['part_name'].toString().toLowerCase();
         loaded = loaded.where((e) {
           final t = (e['title'] ?? '').toString().toLowerCase();
@@ -2101,11 +2244,17 @@ class _BrowsePageState extends State<BrowsePage> {
       }
       if (filters['make'] != null && filters['make'].toString().isNotEmpty) {
         final q = filters['make'].toString().toLowerCase();
-        loaded = loaded.where((e) => (e['make'] ?? '').toString().toLowerCase().contains(q)).toList();
+        loaded = loaded
+            .where(
+                (e) => (e['make'] ?? '').toString().toLowerCase().contains(q))
+            .toList();
       }
       if (filters['model'] != null && filters['model'].toString().isNotEmpty) {
         final q = filters['model'].toString().toLowerCase();
-        loaded = loaded.where((e) => (e['model'] ?? '').toString().toLowerCase().contains(q)).toList();
+        loaded = loaded
+            .where(
+                (e) => (e['model'] ?? '').toString().toLowerCase().contains(q))
+            .toList();
       }
       if (filters['year'] != null) {
         loaded = loaded.where((e) => e['year'] == filters['year']).toList();
@@ -2124,7 +2273,10 @@ class _BrowsePageState extends State<BrowsePage> {
         for (final p in photos) {
           final lid = p['listing_id'];
           byListing.putIfAbsent(lid, () => []);
-          byListing[lid]!.add({'storage_path': p['storage_path'], 'sort_order': p['sort_order']});
+          byListing[lid]!.add({
+            'storage_path': p['storage_path'],
+            'sort_order': p['sort_order']
+          });
         }
         for (final item in loaded) {
           item['listing_photos'] = byListing[item['id']] ?? [];
@@ -2136,8 +2288,8 @@ class _BrowsePageState extends State<BrowsePage> {
         final id = it['id'];
         if (id != null) {
           try {
-            await Supabase.instance.client
-                .rpc('track_event', params: {'_listing_id': id, '_type': 'impression'});
+            await Supabase.instance.client.rpc('track_event',
+                params: {'_listing_id': id, '_type': 'impression'});
           } catch (_) {}
         }
       }
@@ -2191,14 +2343,16 @@ class _BrowsePageState extends State<BrowsePage> {
                     children: [
                       // Top bar with icons
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             // Menu icon
                             IconButton(
                               onPressed: () {},
-                              icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+                              icon: const Icon(Icons.menu,
+                                  color: Colors.white, size: 28),
                             ),
                             // Right side icons
                             Row(
@@ -2212,7 +2366,8 @@ class _BrowsePageState extends State<BrowsePage> {
                                       color: Colors.green.shade400,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.help_outline, color: Colors.white, size: 20),
+                                    child: const Icon(Icons.help_outline,
+                                        color: Colors.white, size: 20),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -2236,7 +2391,10 @@ class _BrowsePageState extends State<BrowsePage> {
                               Text(
                                 'Find Quality Auto Parts Faster',
                                 style: GoogleFonts.poppins(
-                                  fontSize: MediaQuery.of(context).size.width < 360 ? 18 : 22,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 360
+                                          ? 18
+                                          : 22,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.white,
                                   height: 1.2,
@@ -2247,7 +2405,10 @@ class _BrowsePageState extends State<BrowsePage> {
                               Text(
                                 'Browse thousands of listings from verified sellers across the country.',
                                 style: TextStyle(
-                                  fontSize: MediaQuery.of(context).size.width < 360 ? 12 : 14,
+                                  fontSize:
+                                      MediaQuery.of(context).size.width < 360
+                                          ? 12
+                                          : 14,
                                   color: Colors.white.withOpacity(0.9),
                                   height: 1.4,
                                 ),
@@ -2265,27 +2426,27 @@ class _BrowsePageState extends State<BrowsePage> {
               ),
             ),
           ),
-          
+
           // Categories Section
           SliverToBoxAdapter(
             child: _buildCategoriesSection(),
           ),
-          
+
           // Hero Carousel Section
           SliverToBoxAdapter(
             child: _buildHeroCarousel(),
           ),
-          
+
           // Promoted Products Grid
           SliverToBoxAdapter(
             child: _buildPromotedGrid(),
           ),
-          
+
           // Search Panel
           SliverToBoxAdapter(
             child: SearchPanel(onSearch: performAdvancedSearch),
           ),
-          
+
           // All Listings Grid
           SliverToBoxAdapter(
             child: Padding(
@@ -2300,7 +2461,7 @@ class _BrowsePageState extends State<BrowsePage> {
               ),
             ),
           ),
-          
+
           // Results
           _loading
               ? const SliverFillRemaining(
@@ -2312,7 +2473,8 @@ class _BrowsePageState extends State<BrowsePage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                            Icon(Icons.error_outline,
+                                size: 64, color: Colors.grey.shade400),
                             const SizedBox(height: 16),
                             Text(_error!, textAlign: TextAlign.center),
                             const SizedBox(height: 16),
@@ -2330,11 +2492,13 @@ class _BrowsePageState extends State<BrowsePage> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.search_off, size: 64, color: Colors.grey),
+                                Icon(Icons.search_off,
+                                    size: 64, color: Colors.grey),
                                 SizedBox(height: 16),
                                 Text('No listings found'),
                                 SizedBox(height: 8),
-                                Text('Try adjusting your search filters', style: TextStyle(color: Colors.grey)),
+                                Text('Try adjusting your search filters',
+                                    style: TextStyle(color: Colors.grey)),
                               ],
                             ),
                           ),
@@ -2351,29 +2515,34 @@ class _BrowsePageState extends State<BrowsePage> {
                               cols = 3;
                             }
                             // Compute a safe height: image (16:10) + content block
-                            const double padding = 16.0; // matches SliverPadding below
+                            const double padding =
+                                16.0; // matches SliverPadding below
                             const double spacing = 12.0;
                             final double availableWidth = width - (padding * 2);
-                            final double tileWidth = (availableWidth - spacing * (cols - 1)) / cols;
-                            final double mainExtent = (tileWidth * (10 / 16)) + 180; // increased content allowance to avoid overflow
+                            final double tileWidth =
+                                (availableWidth - spacing * (cols - 1)) / cols;
+                            final double mainExtent = (tileWidth * (10 / 16)) +
+                                180; // increased content allowance to avoid overflow
                             return SliverPadding(
                               padding: const EdgeInsets.all(16),
                               sliver: SliverGrid(
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                gridDelegate:
+                                    SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: cols,
                                   mainAxisExtent: mainExtent,
                                   crossAxisSpacing: 12,
                                   mainAxisSpacing: 12,
                                 ),
                                 delegate: SliverChildBuilderDelegate(
-                                  (context, index) => ListingCard(listing: _listings[index]),
+                                  (context, index) =>
+                                      ListingCard(listing: _listings[index]),
                                   childCount: _listings.length,
                                 ),
                               ),
                             );
                           },
                         ),
-          
+
           // Pagination controls
           SliverToBoxAdapter(
             child: _buildPaginationControls(),
@@ -2389,8 +2558,11 @@ class _BrowsePageState extends State<BrowsePage> {
 
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 12,
+        runSpacing: 12,
         children: [
           ElevatedButton.icon(
             onPressed: _currentPage > 1
@@ -2406,14 +2578,11 @@ class _BrowsePageState extends State<BrowsePage> {
               foregroundColor: Colors.white,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Page $_currentPage of $totalPages',
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+          Text(
+            'Page $_currentPage of $totalPages',
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
             ),
           ),
           ElevatedButton.icon(
@@ -2443,7 +2612,8 @@ class _BrowsePageState extends State<BrowsePage> {
             // Navigate to notifications page
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const NotificationsPage()),
+              MaterialPageRoute(
+                  builder: (context) => const NotificationsPage()),
             );
           },
           icon: Container(
@@ -2452,7 +2622,8 @@ class _BrowsePageState extends State<BrowsePage> {
               color: Colors.black.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
+            child: const Icon(Icons.notifications_outlined,
+                color: Colors.white, size: 20),
           ),
         ),
         // Notification badge
@@ -2486,7 +2657,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
   Widget _buildProfileIcon() {
     final user = Supabase.instance.client.auth.currentUser;
-    
+
     return IconButton(
       onPressed: () {
         if (user == null) {
@@ -2530,10 +2701,18 @@ class _BrowsePageState extends State<BrowsePage> {
 
   Widget _buildCategoriesSection() {
     final categories = [
-      {'name': 'Vehicles & Cars', 'icon': Icons.directions_car, 'color': Colors.blue},
+      {
+        'name': 'Vehicles & Cars',
+        'icon': Icons.directions_car,
+        'color': Colors.blue
+      },
       {'name': 'Engine Parts', 'icon': Icons.settings, 'color': Colors.orange},
       {'name': 'Tires & Wheels', 'icon': Icons.album, 'color': Colors.green},
-      {'name': 'Electronics', 'icon': Icons.electrical_services, 'color': Colors.purple},
+      {
+        'name': 'Electronics',
+        'icon': Icons.electrical_services,
+        'color': Colors.purple
+      },
       {'name': 'Body Parts', 'icon': Icons.build, 'color': Colors.red},
     ];
 
@@ -2545,12 +2724,15 @@ class _BrowsePageState extends State<BrowsePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Categories',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.neutralDark,
+              Expanded(
+                child: Text(
+                  'Categories',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.neutralDark,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               TextButton(
@@ -2605,15 +2787,18 @@ class _BrowsePageState extends State<BrowsePage> {
                           width: 65,
                           height: 65,
                           decoration: BoxDecoration(
-                            color: (category['color'] as Color).withOpacity(0.1),
+                            color:
+                                (category['color'] as Color).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: (category['color'] as Color).withOpacity(0.2),
+                              color:
+                                  (category['color'] as Color).withOpacity(0.2),
                               width: 2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: (category['color'] as Color).withOpacity(0.15),
+                                color: (category['color'] as Color)
+                                    .withOpacity(0.15),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -2639,7 +2824,10 @@ class _BrowsePageState extends State<BrowsePage> {
                         ),
                       ],
                     ),
-                  ).animate().fadeIn(delay: Duration(milliseconds: 50 * index)).slideX(begin: 0.3, end: 0),
+                  )
+                      .animate()
+                      .fadeIn(delay: Duration(milliseconds: 50 * index))
+                      .slideX(begin: 0.3, end: 0),
                 );
               },
             ),
@@ -2651,9 +2839,9 @@ class _BrowsePageState extends State<BrowsePage> {
 
   Widget _buildHeroCarousel() {
     if (_featuredListings.isEmpty) return const SizedBox.shrink();
-    
+
     final carouselItems = _featuredListings.take(5).toList();
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
@@ -2668,7 +2856,7 @@ class _BrowsePageState extends State<BrowsePage> {
               autoPlayCurve: Curves.fastOutSlowIn,
               enlargeCenterPage: true,
               viewportFraction: 0.85,
-              aspectRatio: 16/9,
+              aspectRatio: 16 / 9,
               onPageChanged: (index, reason) {
                 setState(() => _currentCarouselIndex = index);
               },
@@ -2700,7 +2888,7 @@ class _BrowsePageState extends State<BrowsePage> {
     final title = listing['title'] ?? 'No Title';
     final price = listing['price'];
     final condition = listing['condition'] ?? '';
-    
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -2740,7 +2928,8 @@ class _BrowsePageState extends State<BrowsePage> {
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: Colors.grey.shade200,
-                          child: const Icon(Icons.image_not_supported, size: 50),
+                          child:
+                              const Icon(Icons.image_not_supported, size: 50),
                         ),
                       );
                     }
@@ -2750,9 +2939,10 @@ class _BrowsePageState extends State<BrowsePage> {
               else
                 Container(
                   color: Colors.grey.shade200,
-                  child: const Icon(Icons.directions_car, size: 80, color: Colors.grey),
+                  child: const Icon(Icons.directions_car,
+                      size: 80, color: Colors.grey),
                 ),
-              
+
               // Gradient Overlay
               Container(
                 decoration: BoxDecoration(
@@ -2767,7 +2957,7 @@ class _BrowsePageState extends State<BrowsePage> {
                   ),
                 ),
               ),
-              
+
               // Content
               Positioned(
                 bottom: 0,
@@ -2781,7 +2971,8 @@ class _BrowsePageState extends State<BrowsePage> {
                     children: [
                       if (condition.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: _getConditionColor(condition),
                             borderRadius: BorderRadius.circular(20),
@@ -2810,13 +3001,16 @@ class _BrowsePageState extends State<BrowsePage> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(
-                              price != null ? '\$${price.toStringAsFixed(2)}' : 'Contact for price',
+                              price != null
+                                  ? '\$${price.toStringAsFixed(2)}'
+                                  : 'Contact for price',
                               style: GoogleFonts.poppins(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -2843,13 +3037,14 @@ class _BrowsePageState extends State<BrowsePage> {
                   ),
                 ),
               ),
-              
+
               // Featured Badge
               Positioned(
                 top: 16,
                 right: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.amber,
                     borderRadius: BorderRadius.circular(20),
@@ -2904,9 +3099,9 @@ class _BrowsePageState extends State<BrowsePage> {
 
   Widget _buildPromotedGrid() {
     if (_featuredListings.length <= 5) return const SizedBox.shrink();
-    
+
     final gridItems = _featuredListings.skip(5).take(6).toList();
-    
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Column(
@@ -2915,12 +3110,15 @@ class _BrowsePageState extends State<BrowsePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'More Featured Items',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.neutralDark,
+              Expanded(
+                child: Text(
+                  'More Featured Items',
+                  style: GoogleFonts.poppins(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.neutralDark,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (_featuredListings.length > 11)
@@ -2929,7 +3127,8 @@ class _BrowsePageState extends State<BrowsePage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PromotedProductsPage(listings: _featuredListings),
+                        builder: (context) =>
+                            PromotedProductsPage(listings: _featuredListings),
                       ),
                     );
                   },
@@ -3018,7 +3217,7 @@ class _SellPageState extends State<SellPage> {
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    
+
     if (user == null) {
       return _buildAuthPrompt();
     }
@@ -3026,17 +3225,17 @@ class _SellPageState extends State<SellPage> {
     if (_checkingProfile) {
       return _buildLoadingScreen();
     }
-    
+
     // Check if user is a seller
     final userType = user.userMetadata?['user_type'] ?? 'buyer';
     if (userType != 'seller') {
       return _buildSellerPrompt();
     }
-    
+
     // Always show My Products page for sellers, but check profile completion when creating listings
     return MyProductsPage();
   }
-  
+
   Widget _buildLoadingScreen() {
     return Scaffold(
       appBar: AppBar(
@@ -3090,7 +3289,8 @@ class _SellPageState extends State<SellPage> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    final homeShell = context.findAncestorStateOfType<_HomeShellState>();
+                    final homeShell =
+                        context.findAncestorStateOfType<_HomeShellState>();
                     if (homeShell != null) {
                       homeShell.switchToTab(3);
                     }
@@ -3160,7 +3360,8 @@ class _SellPageState extends State<SellPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -3215,7 +3416,8 @@ class _SellPageState extends State<SellPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -3228,7 +3430,7 @@ class _SellPageState extends State<SellPage> {
       ),
     );
   }
-  
+
   Widget _buildListingForm() {
     return Scaffold(
       appBar: AppBar(
@@ -3254,7 +3456,7 @@ class _ListingFormState extends State<ListingForm> {
   final _priceController = TextEditingController();
   final _zipController = TextEditingController();
   final _vinController = TextEditingController();
-  
+
   String _category = 'part';
   String _condition = 'used';
   String _selectedPartCategory = 'engine';
@@ -3284,22 +3486,122 @@ class _ListingFormState extends State<ListingForm> {
 
   // Car makes and their models
   final Map<String, List<String>> _carMakes = {
-    'Toyota': ['Camry', 'Corolla', 'Prius', 'RAV4', 'Highlander', 'Tacoma', 'Tundra', 'Sienna', 'Avalon', 'Venza'],
-    'Honda': ['Civic', 'Accord', 'CR-V', 'Pilot', 'Odyssey', 'Fit', 'HR-V', 'Passport', 'Ridgeline', 'Insight'],
-    'Ford': ['F-150', 'Mustang', 'Explorer', 'Escape', 'Focus', 'Fusion', 'Edge', 'Expedition', 'Ranger', 'Bronco'],
-    'Chevrolet': ['Silverado', 'Equinox', 'Malibu', 'Traverse', 'Tahoe', 'Suburban', 'Camaro', 'Corvette', 'Cruze', 'Impala'],
-    'BMW': ['3 Series', '5 Series', '7 Series', 'X3', 'X5', 'X7', 'Z4', 'i3', 'i8', 'M3'],
-    'Mercedes-Benz': ['C-Class', 'E-Class', 'S-Class', 'GLC', 'GLE', 'GLS', 'A-Class', 'CLA', 'GLA', 'AMG GT'],
+    'Toyota': [
+      'Camry',
+      'Corolla',
+      'Prius',
+      'RAV4',
+      'Highlander',
+      'Tacoma',
+      'Tundra',
+      'Sienna',
+      'Avalon',
+      'Venza'
+    ],
+    'Honda': [
+      'Civic',
+      'Accord',
+      'CR-V',
+      'Pilot',
+      'Odyssey',
+      'Fit',
+      'HR-V',
+      'Passport',
+      'Ridgeline',
+      'Insight'
+    ],
+    'Ford': [
+      'F-150',
+      'Mustang',
+      'Explorer',
+      'Escape',
+      'Focus',
+      'Fusion',
+      'Edge',
+      'Expedition',
+      'Ranger',
+      'Bronco'
+    ],
+    'Chevrolet': [
+      'Silverado',
+      'Equinox',
+      'Malibu',
+      'Traverse',
+      'Tahoe',
+      'Suburban',
+      'Camaro',
+      'Corvette',
+      'Cruze',
+      'Impala'
+    ],
+    'BMW': [
+      '3 Series',
+      '5 Series',
+      '7 Series',
+      'X3',
+      'X5',
+      'X7',
+      'Z4',
+      'i3',
+      'i8',
+      'M3'
+    ],
+    'Mercedes-Benz': [
+      'C-Class',
+      'E-Class',
+      'S-Class',
+      'GLC',
+      'GLE',
+      'GLS',
+      'A-Class',
+      'CLA',
+      'GLA',
+      'AMG GT'
+    ],
     'Audi': ['A3', 'A4', 'A6', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'R8'],
-    'Nissan': ['Altima', 'Sentra', 'Maxima', 'Rogue', 'Murano', 'Pathfinder', 'Titan', 'Frontier', '370Z', 'GT-R'],
-    'Hyundai': ['Elantra', 'Sonata', 'Tucson', 'Santa Fe', 'Palisade', 'Veloster', 'Genesis', 'Kona', 'Ioniq', 'Accent'],
-    'Kia': ['Forte', 'Optima', 'Sportage', 'Sorento', 'Telluride', 'Soul', 'Stinger', 'Rio', 'Niro', 'Cadenza'],
+    'Nissan': [
+      'Altima',
+      'Sentra',
+      'Maxima',
+      'Rogue',
+      'Murano',
+      'Pathfinder',
+      'Titan',
+      'Frontier',
+      '370Z',
+      'GT-R'
+    ],
+    'Hyundai': [
+      'Elantra',
+      'Sonata',
+      'Tucson',
+      'Santa Fe',
+      'Palisade',
+      'Veloster',
+      'Genesis',
+      'Kona',
+      'Ioniq',
+      'Accent'
+    ],
+    'Kia': [
+      'Forte',
+      'Optima',
+      'Sportage',
+      'Sorento',
+      'Telluride',
+      'Soul',
+      'Stinger',
+      'Rio',
+      'Niro',
+      'Cadenza'
+    ],
   };
 
   // Years from 1990 to current year + 1
   List<String> get _years {
     final currentYear = DateTime.now().year;
-    return List.generate(currentYear - 1989, (index) => (currentYear + 1 - index).toString());
+    return List.generate(
+        currentYear - 1989, (index) => (currentYear + 1 - index).toString());
   }
 
   // Fuel types
@@ -3330,7 +3632,7 @@ class _ListingFormState extends State<ListingForm> {
         maxHeight: 1080,
         imageQuality: 85,
       );
-      
+
       if (images.isNotEmpty) {
         setState(() {
           _selectedImages.addAll(images);
@@ -3365,7 +3667,7 @@ class _ListingFormState extends State<ListingForm> {
 
   Future<void> _submitListing() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    
+
     setState(() {
       _loading = true;
       _error = null;
@@ -3383,23 +3685,6 @@ class _ListingFormState extends State<ListingForm> {
         }
         return;
       }
-      // On iOS, require any active subscription entitlement before creating a listing
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-        final hasSub = await RevenueCatService.instance.hasAnyEntitlement({
-          'basic_access', 'premium_access', 'vip_access', 'vipgold_access',
-        });
-        if (!hasSub) {
-          if (mounted) {
-            _loading = false;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('A subscription is required to create listings on iOS.')),
-            );
-            context.go('/paywall');
-          }
-          return;
-        }
-      }
-
       // Create listing data matching the actual database schema
       final listingData = <String, dynamic>{
         'owner_id': user.id,
@@ -3414,7 +3699,7 @@ class _ListingFormState extends State<ListingForm> {
       if (_category == 'part') {
         listingData['category'] = _selectedPartCategory;
       }
-      
+
       // Add vehicle-specific fields if category is vehicle (car)
       if (_category == 'vehicle') {
         if (_selectedMake != null) {
@@ -3429,23 +3714,23 @@ class _ListingFormState extends State<ListingForm> {
         // VIN is required for cars
         listingData['vin'] = _vinController.text.trim();
       }
-      
+
       // Use actual ZIP code entered by user, fallback to valid ZIP if needed
       final userZip = _zipController.text.trim();
       listingData['zip'] = userZip.isNotEmpty ? userZip : '00601';
-      
+
       final response = await Supabase.instance.client
           .from('listings')
           .insert(listingData)
           .select()
           .single();
-      
+
       // Upload images if any are selected
       if (_selectedImages.isNotEmpty) {
         final listingId = response['id'];
         await _uploadImages(listingId);
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -3453,7 +3738,7 @@ class _ListingFormState extends State<ListingForm> {
             backgroundColor: AppColors.success,
           ),
         );
-        
+
         // Clear form
         _formKey.currentState?.reset();
         _titleController.clear();
@@ -3471,7 +3756,7 @@ class _ListingFormState extends State<ListingForm> {
           _selectedFuelType = null;
           _selectedImages = [];
         });
-        
+
         // Navigate to My Product page after successful creation
         // Prefer switching tabs if we're inside the HomeShell, otherwise fall back to a route
         final homeShell = context.findAncestorStateOfType<_HomeShellState>();
@@ -3503,13 +3788,13 @@ class _ListingFormState extends State<ListingForm> {
       final image = _selectedImages[i];
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
       final storagePath = 'listings/$listingId/$fileName';
-      
+
       try {
         // Upload to Supabase Storage
         await Supabase.instance.client.storage
             .from('listing-images')
             .uploadBinary(storagePath, await image.readAsBytes());
-        
+
         // Save photo record to database
         await Supabase.instance.client.from('listing_photos').insert({
           'listing_id': listingId,
@@ -3555,14 +3840,15 @@ class _ListingFormState extends State<ListingForm> {
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Title
             TextFormField(
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Title *',
                 hintText: 'e.g., 2020 Toyota Camry Engine',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -3571,9 +3857,9 @@ class _ListingFormState extends State<ListingForm> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Type and Condition selection
             Row(
               children: [
@@ -3582,11 +3868,13 @@ class _ListingFormState extends State<ListingForm> {
                     value: _category,
                     decoration: InputDecoration(
                       labelText: 'Type *',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'part', child: Text('Auto Part')),
-                      DropdownMenuItem(value: 'vehicle', child: Text('Vehicle')),
+                      DropdownMenuItem(
+                          value: 'vehicle', child: Text('Vehicle')),
                     ],
                     onChanged: (value) => setState(() => _category = value!),
                   ),
@@ -3597,35 +3885,40 @@ class _ListingFormState extends State<ListingForm> {
                     value: _condition,
                     decoration: InputDecoration(
                       labelText: 'Condition *',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     items: _conditionOptions.entries.map((entry) {
-                      return DropdownMenuItem(value: entry.key, child: Text(entry.value));
+                      return DropdownMenuItem(
+                          value: entry.key, child: Text(entry.value));
                     }).toList(),
                     onChanged: (value) => setState(() => _condition = value!),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Part category (only show for parts)
             if (_category == 'part') ...[
               DropdownButtonFormField<String>(
                 value: _selectedPartCategory,
                 decoration: InputDecoration(
                   labelText: 'Part Category *',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 items: _partCategories.entries.map((entry) {
-                  return DropdownMenuItem(value: entry.key, child: Text(entry.value));
+                  return DropdownMenuItem(
+                      value: entry.key, child: Text(entry.value));
                 }).toList(),
-                onChanged: (value) => setState(() => _selectedPartCategory = value!),
+                onChanged: (value) =>
+                    setState(() => _selectedPartCategory = value!),
               ),
               const SizedBox(height: 16),
             ],
-            
+
             // Vehicle-specific fields
             if (_category == 'vehicle') ...[
               const SizedBox(height: 16),
@@ -3634,7 +3927,8 @@ class _ListingFormState extends State<ListingForm> {
                 value: _selectedMake,
                 decoration: InputDecoration(
                   labelText: 'Make',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 hint: const Text('Select Make'),
                 items: _carMakes.keys.map((make) {
@@ -3647,20 +3941,22 @@ class _ListingFormState extends State<ListingForm> {
                   });
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Model dropdown (only show if make is selected)
               DropdownButtonFormField<String>(
                 value: _selectedModel,
                 decoration: InputDecoration(
                   labelText: 'Model',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 hint: const Text('Select Model'),
                 items: _selectedMake != null
-                    ? ((_carMakes[_selectedMake!] ?? const <String>[]) as List<String>)
-                        .map((model) => DropdownMenuItem(value: model, child: Text(model)))
+                    ? ((_carMakes[_selectedMake!] ?? const <String>[]))
+                        .map((model) =>
+                            DropdownMenuItem(value: model, child: Text(model)))
                         .toList()
                     : const [],
                 onChanged: _selectedMake != null
@@ -3671,9 +3967,9 @@ class _ListingFormState extends State<ListingForm> {
                       }
                     : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Year and Fuel Type row
               Row(
                 children: [
@@ -3682,7 +3978,8 @@ class _ListingFormState extends State<ListingForm> {
                       value: _selectedYear,
                       decoration: InputDecoration(
                         labelText: 'Year',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       hint: const Text('Select Year'),
                       items: _years.map((year) {
@@ -3701,11 +3998,13 @@ class _ListingFormState extends State<ListingForm> {
                       value: _selectedFuelType,
                       decoration: InputDecoration(
                         labelText: 'Fuel Type',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
                       hint: const Text('Select Fuel Type'),
                       items: _fuelTypes.map((fuelType) {
-                        return DropdownMenuItem(value: fuelType, child: Text(fuelType));
+                        return DropdownMenuItem(
+                            value: fuelType, child: Text(fuelType));
                       }).toList(),
                       onChanged: (value) {
                         setState(() {
@@ -3716,7 +4015,7 @@ class _ListingFormState extends State<ListingForm> {
                   ),
                 ],
               ),
-              
+
               // VIN field for vehicles
               const SizedBox(height: 16),
               TextFormField(
@@ -3724,13 +4023,15 @@ class _ListingFormState extends State<ListingForm> {
                 decoration: InputDecoration(
                   labelText: 'VIN *',
                   hintText: '17-character Vehicle Identification Number',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a VIN';
                   }
-                  final vin = value.trim().replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+                  final vin =
+                      value.trim().replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
                   if (vin.length < 11 || vin.length > 17) {
                     return 'VIN must be between 11-17 characters';
                   }
@@ -3738,9 +4039,9 @@ class _ListingFormState extends State<ListingForm> {
                 },
               ),
             ],
-            
+
             const SizedBox(height: 16),
-            
+
             // Price and ZIP
             Row(
               children: [
@@ -3751,7 +4052,8 @@ class _ListingFormState extends State<ListingForm> {
                       labelText: 'Price *',
                       hintText: '1500.00',
                       prefixText: '\$',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
@@ -3773,7 +4075,8 @@ class _ListingFormState extends State<ListingForm> {
                     decoration: InputDecoration(
                       labelText: 'ZIP Code *',
                       hintText: '90210',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     keyboardType: TextInputType.number,
                     maxLength: 5,
@@ -3781,7 +4084,8 @@ class _ListingFormState extends State<ListingForm> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter a ZIP code';
                       }
-                      if (value.trim().length != 5 || !RegExp(r'^\d{5}$').hasMatch(value.trim())) {
+                      if (value.trim().length != 5 ||
+                          !RegExp(r'^\d{5}$').hasMatch(value.trim())) {
                         return 'ZIP code must be exactly 5 digits';
                       }
                       return null;
@@ -3790,9 +4094,9 @@ class _ListingFormState extends State<ListingForm> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Image Upload Section
             Container(
               padding: const EdgeInsets.all(16),
@@ -3817,7 +4121,8 @@ class _ListingFormState extends State<ListingForm> {
                       ),
                       const Spacer(),
                       TextButton.icon(
-                        onPressed: _selectedImages.length < 5 ? _pickImages : null,
+                        onPressed:
+                            _selectedImages.length < 5 ? _pickImages : null,
                         icon: const Icon(Icons.add_photo_alternate),
                         label: const Text('Add Photos'),
                       ),
@@ -3843,12 +4148,14 @@ class _ListingFormState extends State<ListingForm> {
                                           width: 100,
                                           height: 100,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
                                             return Container(
                                               width: 100,
                                               height: 100,
                                               color: Colors.grey.shade300,
-                                              child: const Icon(Icons.image, color: Colors.grey),
+                                              child: const Icon(Icons.image,
+                                                  color: Colors.grey),
                                             );
                                           },
                                         )
@@ -3896,16 +4203,17 @@ class _ListingFormState extends State<ListingForm> {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Description
             TextFormField(
               controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Description *',
                 hintText: 'Describe the item condition, features, etc.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 alignLabelWithHint: true,
               ),
               maxLines: 4,
@@ -3916,9 +4224,9 @@ class _ListingFormState extends State<ListingForm> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Submit button
             ElevatedButton(
               onPressed: _loading ? null : _submitListing,
@@ -3947,9 +4255,9 @@ class _ListingFormState extends State<ListingForm> {
                       ),
                     ),
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Note
             Container(
               padding: const EdgeInsets.all(12),
@@ -4011,7 +4319,7 @@ class _ChatPageState extends State<ChatPage> {
             .select('profile_completed')
             .eq('id', user.id)
             .maybeSingle();
-        
+
         final profileCompleted = profileResponse?['profile_completed'] ?? false;
         if (!profileCompleted) {
           setState(() => _loading = false);
@@ -4023,8 +4331,9 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
-      final response = await Supabase.instance.client
-          .rpc('get_conversations_with_details', params: {'user_uuid': user.id});
+      final response = await Supabase.instance.client.rpc(
+          'get_conversations_with_details',
+          params: {'user_uuid': user.id});
 
       if (mounted) {
         setState(() {
@@ -4085,7 +4394,8 @@ class _ChatPageState extends State<ChatPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -4116,12 +4426,12 @@ class _ChatPageState extends State<ChatPage> {
               body: const Center(child: CircularProgressIndicator()),
             );
           }
-          
+
           final profileCompleted = snapshot.data ?? true;
           if (!profileCompleted) {
             return _buildProfilePrompt();
           }
-          
+
           return _buildMainChatPage();
         },
       );
@@ -4212,7 +4522,7 @@ class _ChatPageState extends State<ChatPage> {
           .select('profile_completed')
           .eq('id', userId)
           .maybeSingle();
-      
+
       return response?['profile_completed'] ?? false;
     } catch (e) {
       return true; // If error, assume profile is complete
@@ -4261,7 +4571,8 @@ class _ChatPageState extends State<ChatPage> {
                 height: 50,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    final homeShell = context.findAncestorStateOfType<_HomeShellState>();
+                    final homeShell =
+                        context.findAncestorStateOfType<_HomeShellState>();
                     if (homeShell != null) {
                       homeShell.switchToTab(3); // Profile tab
                     }
@@ -4445,7 +4756,9 @@ class _ConversationPageState extends State<ConversationPage> {
   void _setupRealtimeSubscription() {
     final conversationId = widget.conversation['conversation_id'];
     print('Setting up realtime subscription for conversation: $conversationId');
-    
+
+    _channel?.unsubscribe();
+
     _channel = Supabase.instance.client
         .channel('messages_$conversationId')
         .onPostgresChanges(
@@ -4467,20 +4780,21 @@ class _ConversationPageState extends State<ConversationPage> {
           },
         )
         .subscribe((status, [error]) {
-          print('Subscription status: $status, error: $error');
-          if (status == RealtimeSubscribeStatus.closed && mounted) {
-            // Attempt to reconnect after a delay
-            Future.delayed(const Duration(seconds: 3), () {
-              if (mounted) {
-                print('Attempting to reconnect realtime subscription...');
-                _setupRealtimeSubscription();
-              }
-            });
+      print('Subscription status: $status, error: $error');
+      if (status == RealtimeSubscribeStatus.closed && mounted) {
+        // Attempt to reconnect after a delay
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            print('Attempting to reconnect realtime subscription...');
+            _setupRealtimeSubscription();
           }
         });
+      }
+    });
   }
 
-  Future<void> _handleNewMessageNotification(Map<String, dynamic> newMessage) async {
+  Future<void> _handleNewMessageNotification(
+      Map<String, dynamic> newMessage) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
@@ -4494,11 +4808,12 @@ class _ConversationPageState extends State<ConversationPage> {
     if (shouldShowNotification) {
       try {
         // Get sender name
-        String senderName = widget.conversation['other_user_name'] ?? 'Unknown User';
-        
+        String senderName =
+            widget.conversation['other_user_name'] ?? 'Unknown User';
+
         // Get message content
         final content = newMessage['content'] ?? 'New message';
-        
+
         // Show notification with sound
         await _notificationService.showMessageNotification(
           senderName: senderName,
@@ -4517,6 +4832,8 @@ class _ConversationPageState extends State<ConversationPage> {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
+    _typingChannel?.unsubscribe();
+
     _typingChannel = Supabase.instance.client
         .channel('typing_$conversationId')
         .onBroadcast(
@@ -4524,13 +4841,13 @@ class _ConversationPageState extends State<ConversationPage> {
           callback: (payload) {
             final senderId = payload['sender_id'];
             final isTyping = payload['is_typing'] ?? false;
-            
+
             // Only show typing indicator if it's from the other user
             if (senderId != user.id && mounted) {
               setState(() {
                 _otherUserTyping = isTyping;
               });
-              
+
               // Auto-hide typing indicator after 3 seconds
               if (isTyping) {
                 Future.delayed(const Duration(seconds: 3), () {
@@ -4560,11 +4877,32 @@ class _ConversationPageState extends State<ConversationPage> {
     );
   }
 
+  List<Map<String, dynamic>> _sortedUniqueMessages(
+    Iterable<Map<String, dynamic>> messages,
+  ) {
+    final uniqueById = <String, Map<String, dynamic>>{};
+
+    for (final message in messages) {
+      final id = message['id']?.toString();
+      if (id == null || id.isEmpty) continue;
+      uniqueById[id] = Map<String, dynamic>.from(message);
+    }
+
+    final uniqueMessages = uniqueById.values.toList()
+      ..sort(
+        (a, b) => DateTime.parse(a['created_at'])
+            .compareTo(DateTime.parse(b['created_at'])),
+      );
+
+    return uniqueMessages;
+  }
+
   Future<void> _loadSingleMessage(String messageId) async {
     try {
       final response = await Supabase.instance.client
           .from('messages')
-          .select('id, conversation_id, sender_id, content, created_at, read_at')
+          .select(
+              'id, conversation_id, sender_id, content, created_at, read_at')
           .eq('id', messageId)
           .single();
 
@@ -4582,14 +4920,9 @@ class _ConversationPageState extends State<ConversationPage> {
 
       if (mounted) {
         setState(() {
-          // Check if message already exists to avoid duplicates
-          final existingIndex = _messages.indexWhere((m) => m['id'] == messageId);
-          if (existingIndex == -1) {
-            _messages.add(response);
-            _messages.sort((a, b) => DateTime.parse(a['created_at']).compareTo(DateTime.parse(b['created_at'])));
-          }
+          _messages = _sortedUniqueMessages([..._messages, response]);
         });
-        
+
         // Scroll to bottom when new message arrives
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
@@ -4613,7 +4946,8 @@ class _ConversationPageState extends State<ConversationPage> {
     _channel?.unsubscribe();
     _typingChannel?.unsubscribe();
     // Cancel notifications for this conversation when leaving
-    _notificationService.cancelNotification(widget.conversation['conversation_id']);
+    _notificationService
+        .cancelNotification(widget.conversation['conversation_id']);
     super.dispose();
   }
 
@@ -4621,7 +4955,8 @@ class _ConversationPageState extends State<ConversationPage> {
     try {
       final response = await Supabase.instance.client
           .from('messages')
-          .select('id, conversation_id, sender_id, content, created_at, read_at')
+          .select(
+              'id, conversation_id, sender_id, content, created_at, read_at')
           .eq('conversation_id', widget.conversation['conversation_id'])
           .order('created_at', ascending: false)
           .limit(limit)
@@ -4643,14 +4978,15 @@ class _ConversationPageState extends State<ConversationPage> {
       }
 
       // Reverse to show oldest first
-      messages.sort((a, b) => DateTime.parse(a['created_at']).compareTo(DateTime.parse(b['created_at'])));
+      messages.sort((a, b) => DateTime.parse(a['created_at'])
+          .compareTo(DateTime.parse(b['created_at'])));
 
       if (mounted) {
         setState(() {
           if (offset == 0) {
-            _messages = messages;
+            _messages = _sortedUniqueMessages(messages);
           } else {
-            _messages.insertAll(0, messages);
+            _messages = _sortedUniqueMessages([..._messages, ...messages]);
           }
           _loading = false;
         });
@@ -4704,16 +5040,32 @@ class _ConversationPageState extends State<ConversationPage> {
         'content': content,
         'created_at': DateTime.now().toIso8601String(),
       };
-      
+
       print('Sending message: $messageData');
-      
+
       final response = await Supabase.instance.client
           .from('messages')
           .insert(messageData)
-          .select('id, conversation_id, sender_id, content, created_at, read_at')
+          .select(
+              'id, conversation_id, sender_id, content, created_at, read_at')
           .single();
-      
+
       print('Message sent successfully: $response');
+
+      try {
+        final pushResponse = await Supabase.instance.client.functions.invoke(
+          'sendPushNotification',
+          body: {
+            'type': 'chat_message',
+            'message_id': response['id'],
+            'conversation_id': widget.conversation['conversation_id'],
+            'content': response['content'],
+          },
+        );
+        print('Chat push dispatch result: ${pushResponse.data}');
+      } catch (pushError) {
+        print('Error dispatching chat push notification: $pushError');
+      }
 
       // Add sender name to the response
       final currentUser = Supabase.instance.client.auth.currentUser;
@@ -4731,13 +5083,13 @@ class _ConversationPageState extends State<ConversationPage> {
       }
 
       _messageController.clear();
-      
+
       // Add message immediately to UI for instant feedback
       if (mounted) {
         setState(() {
-          _messages.add(response);
+          _messages = _sortedUniqueMessages([..._messages, response]);
         });
-        
+
         // Scroll to bottom
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_scrollController.hasClients) {
@@ -4753,12 +5105,14 @@ class _ConversationPageState extends State<ConversationPage> {
       print('Error sending message: $e');
       if (mounted) {
         String errorMessage = 'Failed to send message';
-        if (e.toString().contains('network') || e.toString().contains('connection')) {
-          errorMessage = 'Network error. Please check your connection and try again.';
+        if (e.toString().contains('network') ||
+            e.toString().contains('connection')) {
+          errorMessage =
+              'Network error. Please check your connection and try again.';
         } else if (e.toString().contains('timeout')) {
           errorMessage = 'Request timed out. Please try again.';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -4778,7 +5132,8 @@ class _ConversationPageState extends State<ConversationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final otherUserName = widget.conversation['other_user_name'] ?? 'Unknown User';
+    final otherUserName =
+        widget.conversation['other_user_name'] ?? 'Unknown User';
     final listingTitle = widget.conversation['listing_title'] ?? 'Unknown Item';
 
     return Scaffold(
@@ -4792,7 +5147,8 @@ class _ConversationPageState extends State<ConversationPage> {
             ),
             Text(
               'Re: $listingTitle',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
             ),
           ],
         ),
@@ -4816,7 +5172,8 @@ class _ConversationPageState extends State<ConversationPage> {
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
-                        itemCount: _messages.length + (_otherUserTyping ? 1 : 0),
+                        itemCount:
+                            _messages.length + (_otherUserTyping ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index == _messages.length && _otherUserTyping) {
                             return _buildTypingIndicator();
@@ -4929,10 +5286,12 @@ class _ConversationPageState extends State<ConversationPage> {
                     )
                   : const Icon(Icons.send),
               color: Colors.white,
-              onPressed: _sending ? null : () {
-                _sendTypingIndicator(false);
-                _sendMessage();
-              },
+              onPressed: _sending
+                  ? null
+                  : () {
+                      _sendTypingIndicator(false);
+                      _sendMessage();
+                    },
             ),
           ),
         ],
@@ -4982,7 +5341,8 @@ class _ConversationPageState extends State<ConversationPage> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.grey.shade400),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.grey.shade400),
                   ),
                 ),
               ],
@@ -5041,12 +5401,12 @@ class _ConversationPageState extends State<ConversationPage> {
     // Find the first matching message and scroll to it
     final firstMatch = searchResults.first;
     final index = _messages.indexWhere((m) => m['id'] == firstMatch['id']);
-    
+
     if (index != -1) {
       // Calculate approximate scroll position
       final itemHeight = 80.0; // Approximate height of a message bubble
       final scrollPosition = index * itemHeight;
-      
+
       _scrollController.animateTo(
         scrollPosition,
         duration: const Duration(milliseconds: 500),
@@ -5075,12 +5435,13 @@ class _ConversationPageState extends State<ConversationPage> {
 
     final nextIndex = (currentIndex + 1) % searchResults.length;
     final nextMatch = searchResults[nextIndex];
-    final messageIndex = _messages.indexWhere((m) => m['id'] == nextMatch['id']);
-    
+    final messageIndex =
+        _messages.indexWhere((m) => m['id'] == nextMatch['id']);
+
     if (messageIndex != -1) {
       final itemHeight = 80.0;
       final scrollPosition = messageIndex * itemHeight;
-      
+
       _scrollController.animateTo(
         scrollPosition,
         duration: const Duration(milliseconds: 300),
@@ -5117,7 +5478,8 @@ class MessageBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isMe) ...[
             CircleAvatar(
@@ -5205,7 +5567,7 @@ class MessageBubble extends StatelessWidget {
 
   String _formatTimestamp(String? timestamp) {
     if (timestamp == null) return '';
-    
+
     try {
       final dateTime = DateTime.parse(timestamp);
       final now = DateTime.now();
@@ -5252,7 +5614,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final _businessDescriptionController = TextEditingController();
   final _yearsInBusinessController = TextEditingController();
   final _specialtiesController = TextEditingController();
-  
+
   String _businessType = 'individual';
   bool _isLoading = false;
   bool _hasProfile = false;
@@ -5287,8 +5649,10 @@ class _ProfilePageState extends State<ProfilePage> {
             _cityController.text = response['city'] ?? '';
             _stateController.text = response['state'] ?? '';
             _zipController.text = response['zip_code'] ?? '';
-            _businessDescriptionController.text = response['business_description'] ?? '';
-            _yearsInBusinessController.text = response['years_in_business']?.toString() ?? '';
+            _businessDescriptionController.text =
+                response['business_description'] ?? '';
+            _yearsInBusinessController.text =
+                response['years_in_business']?.toString() ?? '';
             _specialtiesController.text = response['specialties'] ?? '';
             _businessType = response['business_type'] ?? 'individual';
           });
@@ -5307,12 +5671,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
   bool _isProfileComplete() {
     return _businessNameController.text.trim().isNotEmpty &&
-           _contactPersonController.text.trim().isNotEmpty &&
-           _phoneController.text.trim().isNotEmpty &&
-           _addressController.text.trim().isNotEmpty &&
-           _cityController.text.trim().isNotEmpty &&
-           _stateController.text.trim().isNotEmpty &&
-           _zipController.text.trim().isNotEmpty;
+        _contactPersonController.text.trim().isNotEmpty &&
+        _phoneController.text.trim().isNotEmpty &&
+        _addressController.text.trim().isNotEmpty &&
+        _cityController.text.trim().isNotEmpty &&
+        _stateController.text.trim().isNotEmpty &&
+        _zipController.text.trim().isNotEmpty;
   }
 
   Future<void> _saveProfile() async {
@@ -5325,7 +5689,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (user == null) throw Exception('User not authenticated');
 
       final isComplete = _isProfileComplete();
-      
+
       final profileData = {
         'id': user.id,
         'business_name': _businessNameController.text.trim(),
@@ -5350,17 +5714,15 @@ class _ProfilePageState extends State<ProfilePage> {
             .update(profileData)
             .eq('id', user.id);
       } else {
-        await Supabase.instance.client
-            .from('profiles')
-            .insert(profileData);
+        await Supabase.instance.client.from('profiles').insert(profileData);
         setState(() => _hasProfile = true);
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isComplete 
-                ? 'Profile completed successfully! You can now create listings.' 
+            content: Text(isComplete
+                ? 'Profile completed successfully! You can now create listings.'
                 : 'Profile saved! Complete all required fields to start selling.'),
             backgroundColor: isComplete ? Colors.green : Colors.orange,
           ),
@@ -5376,7 +5738,8 @@ class _ProfilePageState extends State<ProfilePage> {
             'state': _stateController.text.trim(),
             'zip_code': _zipController.text.trim(),
             'business_description': _businessDescriptionController.text.trim(),
-            'years_in_business': int.tryParse(_yearsInBusinessController.text) ?? 0,
+            'years_in_business':
+                int.tryParse(_yearsInBusinessController.text) ?? 0,
             'specialties': _specialtiesController.text.trim(),
             'business_type': _businessType,
           };
@@ -5430,9 +5793,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.red, size: 20),
                         SizedBox(width: 8),
-                        Text('This will permanently delete:', style: TextStyle(fontWeight: FontWeight.w600)),
+                        Text('This will permanently delete:',
+                            style: TextStyle(fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -5495,7 +5860,8 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Account data deleted successfully. You have been signed out.'),
+            content: Text(
+                'Account data deleted successfully. You have been signed out.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 4),
           ),
@@ -5525,7 +5891,12 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 6,
+              offset: const Offset(0, 3))
+        ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5536,7 +5907,8 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(value.isEmpty ? 'â€”' : value),
               ],
@@ -5548,7 +5920,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _helpAndLegalSection(BuildContext context, Map<String, dynamic> p) {
-    final userType = ((p['user_type'] ?? Supabase.instance.client.auth.currentUser?.userMetadata?['user_type']) ?? 'buyer').toString();
+    final userType = ((p['user_type'] ??
+                Supabase.instance.client.auth.currentUser
+                    ?.userMetadata?['user_type']) ??
+            'buyer')
+        .toString();
     final isSeller = userType == 'seller';
 
     return Container(
@@ -5556,12 +5932,19 @@ class _ProfilePageState extends State<ProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Help & Legal', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+          Text('Help & Legal',
+              style: GoogleFonts.poppins(
+                  fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           ListTile(
             dense: true,
@@ -5595,7 +5978,9 @@ class _ProfilePageState extends State<ProfilePage> {
           if (!isSeller) ...[
             ElevatedButton(
               onPressed: () => context.go('/auth'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white),
               child: const Text('Become a Seller'),
             ),
             const SizedBox(height: 8),
@@ -5618,7 +6003,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildProfileSummary() {
     final p = _profile ?? {};
-    final location = ((p['city'] ?? '') as String) + (((p['state'] ?? '') as String).isNotEmpty ? ', ${p['state']}' : '');
+    final location = ((p['city'] ?? '') as String) +
+        (((p['state'] ?? '') as String).isNotEmpty ? ', ${p['state']}' : '');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your Profile'),
@@ -5656,7 +6042,10 @@ class _ProfilePageState extends State<ProfilePage> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4)),
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4)),
                 ],
               ),
               child: Row(
@@ -5664,7 +6053,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   CircleAvatar(
                     radius: 28,
                     backgroundColor: AppColors.primary.withOpacity(0.15),
-                    child: const Icon(Icons.person, color: AppColors.primary, size: 28),
+                    child: const Icon(Icons.person,
+                        color: AppColors.primary, size: 28),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -5672,11 +6062,16 @@ class _ProfilePageState extends State<ProfilePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (p['business_name'] ?? p['contact_person'] ?? 'Your Profile').toString(),
-                          style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+                          (p['business_name'] ??
+                                  p['contact_person'] ??
+                                  'Your Profile')
+                              .toString(),
+                          style: GoogleFonts.poppins(
+                              fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
-                        Text(location, style: TextStyle(color: Colors.grey.shade600)),
+                        Text(location,
+                            style: TextStyle(color: Colors.grey.shade600)),
                       ],
                     ),
                   ),
@@ -5685,7 +6080,11 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 16),
             // Your Plan card (sellers only)
-            if (((p['user_type'] ?? Supabase.instance.client.auth.currentUser?.userMetadata?['user_type']) ?? 'buyer') == 'seller')
+            if (((p['user_type'] ??
+                        Supabase.instance.client.auth.currentUser
+                            ?.userMetadata?['user_type']) ??
+                    'buyer') ==
+                'seller')
               Container(
                 padding: const EdgeInsets.all(16),
                 margin: const EdgeInsets.only(bottom: 16),
@@ -5694,13 +6093,17 @@ class _ProfilePageState extends State<ProfilePage> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.green.shade200),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 4)),
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4)),
                   ],
                 ),
                 child: Builder(
                   builder: (context) {
                     String planId = (p['active_plan_id'] as String?) ?? 'free';
-                    final status = (p['subscription_status'] as String?) ?? 'inactive';
+                    final status =
+                        (p['subscription_status'] as String?) ?? 'inactive';
                     String label(String id) {
                       switch (id) {
                         case 'basic':
@@ -5715,26 +6118,33 @@ class _ProfilePageState extends State<ProfilePage> {
                           return 'Free';
                       }
                     }
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Your Plan', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.green.shade900)),
+                        Text('Your Plan',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: Colors.green.shade900)),
                         const SizedBox(height: 6),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
                                 '${label(planId)} (${status})',
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w600),
                               ),
                             ),
                             OutlinedButton.icon(
                               onPressed: () {
                                 // On iOS, go directly to RevenueCat paywall
-                                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-                                  context.go('/paywall');
+                                if (!kIsWeb &&
+                                    defaultTargetPlatform ==
+                                        TargetPlatform.iOS) {
+                                  context.push('/paywall');
                                 } else {
-                                  context.go('/billing');
+                                  context.push('/billing');
                                 }
                               },
                               icon: const Icon(Icons.manage_accounts),
@@ -5744,15 +6154,20 @@ class _ProfilePageState extends State<ProfilePage> {
                             ElevatedButton.icon(
                               onPressed: () {
                                 // On iOS, go directly to RevenueCat paywall
-                                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
-                                  context.go('/paywall');
+                                if (!kIsWeb &&
+                                    defaultTargetPlatform ==
+                                        TargetPlatform.iOS) {
+                                  context.push('/paywall');
                                 } else {
-                                  context.go('/billing');
+                                  context.push('/billing');
                                 }
                               },
                               icon: const Icon(Icons.upgrade),
-                              label: Text(planId == 'free' ? 'Upgrade' : 'Change Plan'),
-                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                              label: Text(
+                                  planId == 'free' ? 'Upgrade' : 'Change Plan'),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white),
                             ),
                           ],
                         ),
@@ -5762,12 +6177,18 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             _infoTile(Icons.phone, 'Phone', (p['phone'] ?? '').toString()),
-            _infoTile(Icons.store, 'Business Type', (p['business_type'] ?? '').toString()),
-            _infoTile(Icons.location_on, 'Address', (p['address'] ?? '').toString()),
-            _infoTile(Icons.badge, 'Contact Person', (p['contact_person'] ?? '').toString()),
-            _infoTile(Icons.calendar_month, 'Years in Business', (p['years_in_business'] ?? '').toString()),
-            _infoTile(Icons.list_alt, 'Specialties', (p['specialties'] ?? '').toString()),
-            _infoTile(Icons.description, 'Description', (p['business_description'] ?? '').toString()),
+            _infoTile(Icons.store, 'Business Type',
+                (p['business_type'] ?? '').toString()),
+            _infoTile(
+                Icons.location_on, 'Address', (p['address'] ?? '').toString()),
+            _infoTile(Icons.badge, 'Contact Person',
+                (p['contact_person'] ?? '').toString()),
+            _infoTile(Icons.calendar_month, 'Years in Business',
+                (p['years_in_business'] ?? '').toString()),
+            _infoTile(Icons.list_alt, 'Specialties',
+                (p['specialties'] ?? '').toString()),
+            _infoTile(Icons.description, 'Description',
+                (p['business_description'] ?? '').toString()),
             const SizedBox(height: 16),
             _helpAndLegalSection(context, p),
           ],
@@ -5779,7 +6200,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
-    
+
     // Restrict access to authenticated users only
     if (user == null) {
       return Scaffold(
@@ -5822,7 +6243,8 @@ class _ProfilePageState extends State<ProfilePage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -5846,15 +6268,17 @@ class _ProfilePageState extends State<ProfilePage> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     // Always show profile page directly - no more flashing completion screen
     if (_hasProfile && !_editMode) {
       return _buildProfileSummary();
     }
-    
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(_hasProfile ? (_editMode ? 'Edit Profile' : 'Your Profile') : 'Complete Your Profile'),
+        title: Text(_hasProfile
+            ? (_editMode ? 'Edit Profile' : 'Your Profile')
+            : 'Complete Your Profile'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
@@ -5862,7 +6286,11 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(
               onPressed: _isLoading ? null : _saveProfile,
               child: _isLoading
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
                   : const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           if (_hasProfile)
@@ -5916,9 +6344,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Business Type
               Text(
                 'Business Type',
@@ -5931,77 +6359,96 @@ class _ProfilePageState extends State<ProfilePage> {
               DropdownButtonFormField<String>(
                 value: _businessType,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'individual', child: Text('Individual Seller')),
-                  DropdownMenuItem(value: 'auto_shop', child: Text('Auto Shop')),
-                  DropdownMenuItem(value: 'parts_dealer', child: Text('Parts Dealer')),
-                  DropdownMenuItem(value: 'salvage_yard', child: Text('Salvage Yard')),
+                  DropdownMenuItem(
+                      value: 'individual', child: Text('Individual Seller')),
+                  DropdownMenuItem(
+                      value: 'auto_shop', child: Text('Auto Shop')),
+                  DropdownMenuItem(
+                      value: 'parts_dealer', child: Text('Parts Dealer')),
+                  DropdownMenuItem(
+                      value: 'salvage_yard', child: Text('Salvage Yard')),
                 ],
                 onChanged: (value) => setState(() => _businessType = value!),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Business/Shop Name
               TextFormField(
                 controller: _businessNameController,
                 decoration: InputDecoration(
                   labelText: 'Business/Shop Name *',
                   hintText: 'Enter your business or shop name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                validator: (value) => value?.isEmpty == true ? 'Business name is required' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Business name is required' : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Contact Person
               TextFormField(
                 controller: _contactPersonController,
                 decoration: InputDecoration(
                   labelText: 'Contact Person *',
                   hintText: 'Your full name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                validator: (value) => value?.isEmpty == true ? 'Contact person is required' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Contact person is required'
+                    : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Phone
               TextFormField(
                 controller: _phoneController,
                 decoration: InputDecoration(
                   labelText: 'Phone Number *',
                   hintText: '(555) 123-4567',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 keyboardType: TextInputType.phone,
-                validator: (value) => value?.isEmpty == true ? 'Phone number is required' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Phone number is required' : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Address
               TextFormField(
                 controller: _addressController,
                 decoration: InputDecoration(
                   labelText: 'Street Address *',
                   hintText: '123 Main Street',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                validator: (value) => value?.isEmpty == true ? 'Address is required' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Address is required' : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // City, State, ZIP
               Row(
                 children: [
@@ -6011,10 +6458,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       controller: _cityController,
                       decoration: InputDecoration(
                         labelText: 'City *',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      validator: (value) => value?.isEmpty == true ? 'City is required' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'City is required' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -6023,10 +6473,13 @@ class _ProfilePageState extends State<ProfilePage> {
                       controller: _stateController,
                       decoration: InputDecoration(
                         labelText: 'State *',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      validator: (value) => value?.isEmpty == true ? 'State is required' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'State is required' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -6035,60 +6488,70 @@ class _ProfilePageState extends State<ProfilePage> {
                       controller: _zipController,
                       decoration: InputDecoration(
                         labelText: 'ZIP *',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value?.isEmpty == true ? 'ZIP is required' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'ZIP is required' : null,
                     ),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Years in Business
               TextFormField(
                 controller: _yearsInBusinessController,
                 decoration: InputDecoration(
                   labelText: 'Years in Business',
                   hintText: 'How many years have you been in business?',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 keyboardType: TextInputType.number,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Specialties
               TextFormField(
                 controller: _specialtiesController,
                 decoration: InputDecoration(
                   labelText: 'Specialties',
-                  hintText: 'e.g., Honda parts, Engine components, Electrical systems',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  hintText:
+                      'e.g., Honda parts, Engine components, Electrical systems',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 maxLines: 2,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Business Description
               TextFormField(
                 controller: _businessDescriptionController,
                 decoration: InputDecoration(
                   labelText: 'Business Description',
                   hintText: 'Tell buyers about your business and experience',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 maxLines: 3,
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Save Button
               SizedBox(
                 width: double.infinity,
@@ -6113,7 +6576,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
             ],
           ),
@@ -6135,7 +6598,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   final _businessDescriptionController = TextEditingController();
   final _yearsInBusinessController = TextEditingController();
   final _specialtiesController = TextEditingController();
-  
+
   String _businessType = 'individual';
   bool _isLoading = false;
 
@@ -6157,22 +6620,22 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
   bool _isProfileComplete() {
     final user = Supabase.instance.client.auth.currentUser;
     final userType = user?.userMetadata?['user_type'] ?? 'buyer';
-    
+
     if (userType == 'buyer') {
       // Buyers only need basic info
       return _contactPersonController.text.trim().isNotEmpty &&
-             _phoneController.text.trim().isNotEmpty &&
-             _cityController.text.trim().isNotEmpty &&
-             _stateController.text.trim().isNotEmpty;
+          _phoneController.text.trim().isNotEmpty &&
+          _cityController.text.trim().isNotEmpty &&
+          _stateController.text.trim().isNotEmpty;
     } else {
       // Sellers need complete business info
       return _businessNameController.text.trim().isNotEmpty &&
-             _contactPersonController.text.trim().isNotEmpty &&
-             _phoneController.text.trim().isNotEmpty &&
-             _addressController.text.trim().isNotEmpty &&
-             _cityController.text.trim().isNotEmpty &&
-             _stateController.text.trim().isNotEmpty &&
-             _zipController.text.trim().isNotEmpty;
+          _contactPersonController.text.trim().isNotEmpty &&
+          _phoneController.text.trim().isNotEmpty &&
+          _addressController.text.trim().isNotEmpty &&
+          _cityController.text.trim().isNotEmpty &&
+          _stateController.text.trim().isNotEmpty &&
+          _zipController.text.trim().isNotEmpty;
     }
   }
 
@@ -6187,7 +6650,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
       final userType = user.userMetadata?['user_type'] ?? 'buyer';
       final isComplete = _isProfileComplete();
-      
+
       final profileData = {
         'id': user.id,
         'user_type': userType,
@@ -6208,8 +6671,8 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           'address': _addressController.text.trim(),
           'zip_code': _zipController.text.trim(),
           'business_description': _businessDescriptionController.text.trim(),
-          'years_in_business': _yearsInBusinessController.text.trim().isNotEmpty 
-              ? int.tryParse(_yearsInBusinessController.text.trim()) 
+          'years_in_business': _yearsInBusinessController.text.trim().isNotEmpty
+              ? int.tryParse(_yearsInBusinessController.text.trim())
               : null,
           'specialties': _specialtiesController.text.trim(),
         });
@@ -6220,20 +6683,18 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
         }
       }
 
-      await Supabase.instance.client
-          .from('profiles')
-          .upsert(profileData);
+      await Supabase.instance.client.from('profiles').upsert(profileData);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isComplete 
-                ? 'Profile completed successfully!' 
+            content: Text(isComplete
+                ? 'Profile completed successfully!'
                 : 'Profile saved! You can complete it later.'),
             backgroundColor: isComplete ? Colors.green : Colors.orange,
           ),
         );
-        
+
         // Navigate to home after profile completion
         context.go('/home');
       }
@@ -6299,7 +6760,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isSeller 
+                      isSeller
                           ? 'Complete your business profile to start selling parts'
                           : 'Complete your profile to start browsing and buying parts',
                       style: TextStyle(
@@ -6311,7 +6772,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
 
               // Business Type (Sellers only)
@@ -6328,14 +6789,19 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                 DropdownButtonFormField<String>(
                   value: _businessType,
                   decoration: InputDecoration(
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'individual', child: Text('Individual Seller')),
+                    DropdownMenuItem(
+                        value: 'individual', child: Text('Individual Seller')),
                     DropdownMenuItem(value: 'shop', child: Text('Auto Shop')),
-                    DropdownMenuItem(value: 'dealer', child: Text('Parts Dealer')),
-                    DropdownMenuItem(value: 'salvage', child: Text('Salvage Yard')),
+                    DropdownMenuItem(
+                        value: 'dealer', child: Text('Parts Dealer')),
+                    DropdownMenuItem(
+                        value: 'salvage', child: Text('Salvage Yard')),
                   ],
                   onChanged: (value) => setState(() => _businessType = value!),
                 ),
@@ -6347,43 +6813,54 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                   decoration: InputDecoration(
                     labelText: 'Business/Shop Name *',
                     hintText: 'Enter your business name',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
-                  validator: (value) => value?.isEmpty == true ? 'Business name is required' : null,
+                  validator: (value) => value?.isEmpty == true
+                      ? 'Business name is required'
+                      : null,
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // Contact Person
               TextFormField(
                 controller: _contactPersonController,
                 decoration: InputDecoration(
                   labelText: 'Contact Person *',
                   hintText: 'Your full name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
-                validator: (value) => value?.isEmpty == true ? 'Contact person is required' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Contact person is required'
+                    : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Phone
               TextFormField(
                 controller: _phoneController,
                 decoration: InputDecoration(
                   labelText: 'Phone Number *',
                   hintText: '(555) 123-4567',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 keyboardType: TextInputType.phone,
-                validator: (value) => value?.isEmpty == true ? 'Phone number is required' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Phone number is required' : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Address (Sellers only, required)
               if (isSeller) ...[
                 TextFormField(
@@ -6391,14 +6868,18 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                   decoration: InputDecoration(
                     labelText: 'Street Address *',
                     hintText: '123 Main Street',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
-                  validator: (value) => value?.isEmpty == true ? 'Address is required for sellers' : null,
+                  validator: (value) => value?.isEmpty == true
+                      ? 'Address is required for sellers'
+                      : null,
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // City, State, ZIP
               Row(
                 children: [
@@ -6408,10 +6889,13 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       controller: _cityController,
                       decoration: InputDecoration(
                         labelText: 'City *',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      validator: (value) => value?.isEmpty == true ? 'City is required' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'City is required' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -6420,10 +6904,13 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       controller: _stateController,
                       decoration: InputDecoration(
                         labelText: 'State *',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
-                      validator: (value) => value?.isEmpty == true ? 'State is required' : null,
+                      validator: (value) =>
+                          value?.isEmpty == true ? 'State is required' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -6432,65 +6919,75 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                       controller: _zipController,
                       decoration: InputDecoration(
                         labelText: isSeller ? 'ZIP *' : 'ZIP',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       keyboardType: TextInputType.number,
-                      validator: isSeller 
-                          ? (value) => value?.isEmpty == true ? 'ZIP is required for sellers' : null
+                      validator: isSeller
+                          ? (value) => value?.isEmpty == true
+                              ? 'ZIP is required for sellers'
+                              : null
                           : null,
                     ),
                   ),
                 ],
               ),
-              
+
               // Seller-specific fields
               if (isSeller) ...[
                 const SizedBox(height: 16),
-                
+
                 // Years in Business
                 TextFormField(
                   controller: _yearsInBusinessController,
                   decoration: InputDecoration(
                     labelText: 'Years in Business',
                     hintText: 'How many years have you been in business?',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   keyboardType: TextInputType.number,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Specialties
                 TextFormField(
                   controller: _specialtiesController,
                   decoration: InputDecoration(
                     labelText: 'Specialties',
                     hintText: 'e.g., Engine parts, Transmission, Brakes',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   maxLines: 2,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Business Description
                 TextFormField(
                   controller: _businessDescriptionController,
                   decoration: InputDecoration(
                     labelText: 'Business Description',
                     hintText: 'Tell buyers about your business...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   maxLines: 3,
                 ),
               ],
-              
+
               const SizedBox(height: 24),
-              
+
               // Save Button
               SizedBox(
                 height: 50,
@@ -6514,10 +7011,9 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
-                          ],
+            ],
           ),
         ),
       ),
@@ -6527,7 +7023,7 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
 
 class SearchPanel extends StatefulWidget {
   final Function(Map<String, dynamic>) onSearch;
-  
+
   const SearchPanel({super.key, required this.onSearch});
 
   @override
@@ -6540,7 +7036,7 @@ class _SearchPanelState extends State<SearchPanel> {
   final _make = TextEditingController();
   final _model = TextEditingController();
   final _year = TextEditingController();
-  
+
   String _category = 'all';
   String _condition = 'all';
   double _radius = 25.0;
@@ -6548,13 +7044,14 @@ class _SearchPanelState extends State<SearchPanel> {
 
   void _onSearch() {
     final zip = _zip.text.trim();
-    if (zip.isNotEmpty && (zip.length != 5 || !RegExp(r'^\d{5}$').hasMatch(zip))) {
+    if (zip.isNotEmpty &&
+        (zip.length != 5 || !RegExp(r'^\d{5}$').hasMatch(zip))) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid 5-digit ZIP code')),
       );
       return;
     }
-    
+
     // Build search filters
     final filters = <String, dynamic>{
       if (zip.isNotEmpty) 'zip': zip,
@@ -6566,7 +7063,7 @@ class _SearchPanelState extends State<SearchPanel> {
       if (_model.text.trim().isNotEmpty) 'model': _model.text.trim(),
       if (_year.text.trim().isNotEmpty) 'year': int.tryParse(_year.text.trim()),
     };
-    
+
     widget.onSearch(filters);
   }
 
@@ -6584,13 +7081,15 @@ class _SearchPanelState extends State<SearchPanel> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Primary search bar
-          Row(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 420;
+          final isVeryNarrow = constraints.maxWidth < 360;
+          return Column(
             children: [
-              Expanded(
-                child: TextField(
+              // Primary search bar
+              if (isNarrow) ...[
+                TextField(
                   controller: _partName,
                   decoration: InputDecoration(
                     hintText: 'Search parts, vehicles...',
@@ -6599,114 +7098,207 @@ class _SearchPanelState extends State<SearchPanel> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
                   ),
                   onSubmitted: (_) => _onSearch(),
                 ),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: _onSearch,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _onSearch,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Search'),
+                  ),
                 ),
-                child: const Text('Search'),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Quick filters
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _partName,
+                        decoration: InputDecoration(
+                          hintText: 'Search parts, vehicles...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                        ),
+                        onSubmitted: (_) => _onSearch(),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: _onSearch,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Search'),
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 16),
+
+              // Quick filters
+              if (isNarrow) ...[
+                DropdownButtonFormField<String>(
                   value: _category,
                   decoration: InputDecoration(
                     labelText: 'Category',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'all', child: Text('All Categories')),
+                    DropdownMenuItem(
+                        value: 'all', child: Text('All Categories')),
                     DropdownMenuItem(value: 'vehicle', child: Text('Vehicles')),
                     DropdownMenuItem(value: 'part', child: Text('Parts')),
                   ],
                   onChanged: (value) => setState(() => _category = value!),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<String>(
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
                   value: _condition,
                   decoration: InputDecoration(
                     labelText: 'Condition',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'all', child: Text('Any Condition')),
+                    DropdownMenuItem(
+                        value: 'all', child: Text('Any Condition')),
                     DropdownMenuItem(value: 'new', child: Text('New')),
-                    DropdownMenuItem(value: 'like_new', child: Text('Like New')),
+                    DropdownMenuItem(
+                        value: 'like_new', child: Text('Like New')),
                     DropdownMenuItem(value: 'used', child: Text('Used')),
                     DropdownMenuItem(value: 'fair', child: Text('Fair')),
                     DropdownMenuItem(value: 'salvage', child: Text('Salvage')),
                   ],
                   onChanged: (value) => setState(() => _condition = value!),
                 ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _category,
+                        decoration: InputDecoration(
+                          labelText: 'Category',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'all', child: Text('All Categories')),
+                          DropdownMenuItem(
+                              value: 'vehicle', child: Text('Vehicles')),
+                          DropdownMenuItem(value: 'part', child: Text('Parts')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _category = value!),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _condition,
+                        decoration: InputDecoration(
+                          labelText: 'Condition',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                              value: 'all', child: Text('Any Condition')),
+                          DropdownMenuItem(value: 'new', child: Text('New')),
+                          DropdownMenuItem(
+                              value: 'like_new', child: Text('Like New')),
+                          DropdownMenuItem(value: 'used', child: Text('Used')),
+                          DropdownMenuItem(value: 'fair', child: Text('Fair')),
+                          DropdownMenuItem(
+                              value: 'salvage', child: Text('Salvage')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _condition = value!),
+                      ),
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 16),
+
+              // Advanced filters toggle
+              InkWell(
+                onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        _showAdvanced
+                            ? 'Hide Advanced Filters'
+                            : 'Show Advanced Filters',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    Icon(
+                      _showAdvanced ? Icons.expand_less : Icons.expand_more,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Advanced filters toggle
-          InkWell(
-            onTap: () => setState(() => _showAdvanced = !_showAdvanced),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  _showAdvanced ? 'Hide Advanced Filters' : 'Show Advanced Filters',
-                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                ),
-                Icon(
-                  _showAdvanced ? Icons.expand_less : Icons.expand_more,
-                  color: AppColors.primary,
-                ),
-              ],
-            ),
-          ),
-          
-          // Advanced filters
-          if (_showAdvanced) ...[
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 16),
-            
-            // ZIP and radius
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
+
+              // Advanced filters
+              if (_showAdvanced) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // ZIP and radius
+                if (isNarrow) ...[
+                  TextField(
                     controller: _zip,
                     decoration: InputDecoration(
                       labelText: 'ZIP Code (optional)',
                       hintText: '12345',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                     keyboardType: TextInputType.number,
                     maxLength: 5,
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Radius: ${_radius.round()} miles'),
@@ -6720,54 +7312,134 @@ class _SearchPanelState extends State<SearchPanel> {
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Vehicle-specific filters
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _zip,
+                          decoration: InputDecoration(
+                            labelText: 'ZIP Code (optional)',
+                            hintText: '12345',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                          keyboardType: TextInputType.number,
+                          maxLength: 5,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Radius: ${_radius.round()} miles'),
+                            Slider(
+                              value: _radius,
+                              min: 5,
+                              max: 100,
+                              divisions: 19,
+                              activeColor: AppColors.primary,
+                              onChanged: (value) =>
+                                  setState(() => _radius = value),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: 16),
+
+                // Vehicle-specific filters
+                if (isVeryNarrow) ...[
+                  TextField(
                     controller: _make,
                     decoration: InputDecoration(
                       labelText: 'Make (optional)',
                       hintText: 'Toyota, Ford...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
+                  const SizedBox(height: 12),
+                  TextField(
                     controller: _model,
                     decoration: InputDecoration(
                       labelText: 'Model (optional)',
                       hintText: 'Camry, F-150...',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
+                  const SizedBox(height: 12),
+                  TextField(
                     controller: _year,
                     decoration: InputDecoration(
                       labelText: 'Year (optional)',
                       hintText: '2020',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
                     ),
                   ),
-                ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _make,
+                          decoration: InputDecoration(
+                            labelText: 'Make (optional)',
+                            hintText: 'Toyota, Ford...',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _model,
+                          decoration: InputDecoration(
+                            labelText: 'Model (optional)',
+                            hintText: 'Camry, F-150...',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _year,
+                          decoration: InputDecoration(
+                            labelText: 'Year (optional)',
+                            hintText: '2020',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
-            ),
-          ],
-        ],
+            ],
+          );
+        },
       ),
     );
   }
@@ -6779,6 +7451,26 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Notifications',
+            style: GoogleFonts.poppins(
+              fontWeight: FontWeight.w600,
+              color: AppColors.neutralDark,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.neutralDark),
+        ),
+        body: const Center(child: Text('Sign in to view notifications')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -6791,20 +7483,182 @@ class NotificationsPage extends StatelessWidget {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.neutralDark),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                await Supabase.instance.client
+                    .rpc('mark_all_notifications_read');
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text('Failed to mark notifications as read: $e')),
+                );
+              }
+            },
+            child: const Text('Mark all read'),
+          ),
+        ],
       ),
       body: Container(
         color: const Color(0xFFF8F9FA),
-        child: const Center(
-          child: Text(
-            'No notifications yet',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
+        child: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: Supabase.instance.client
+              .from('user_notifications')
+              .stream(primaryKey: ['id'])
+              .eq('user_id', user.id)
+              .order('created_at', ascending: false),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    'Failed to load notifications: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            final notifications = snapshot.data ?? const [];
+            if (notifications.isEmpty) {
+              return const Center(
+                child: Text(
+                  'No notifications yet',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final notification = notifications[index];
+                final readAt = notification['read_at'];
+                final title =
+                    (notification['title'] ?? 'Notification').toString();
+                final body = (notification['body'] ?? '').toString();
+                final kind = (notification['kind'] ?? 'general').toString();
+                final createdAt = notification['created_at']?.toString();
+
+                return InkWell(
+                  onTap: () async {
+                    if (readAt == null) {
+                      await Supabase.instance.client
+                          .rpc('mark_notification_read', params: {
+                        'p_notification_id': notification['id'],
+                      });
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color:
+                          readAt == null ? Colors.white : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: readAt == null
+                            ? AppColors.primary.withOpacity(0.18)
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: kind == 'admin_broadcast'
+                              ? Colors.deepOrange.withOpacity(0.12)
+                              : AppColors.primary.withOpacity(0.12),
+                          child: Icon(
+                            kind == 'admin_broadcast'
+                                ? Icons.campaign_outlined
+                                : Icons.chat_bubble_outline,
+                            color: kind == 'admin_broadcast'
+                                ? Colors.deepOrange
+                                : AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: readAt == null
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: AppColors.neutralDark,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                body,
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                createdAt == null
+                                    ? ''
+                                    : _formatNotificationTimestamp(createdAt),
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (readAt == null)
+                          Container(
+                            width: 10,
+                            height: 10,
+                            margin: const EdgeInsets.only(top: 6),
+                            decoration: const BoxDecoration(
+                              color: AppColors.secondary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       ),
     );
+  }
+
+  String _formatNotificationTimestamp(String timestamp) {
+    try {
+      final dateTime = DateTime.parse(timestamp).toLocal();
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inDays >= 1) {
+        return '${difference.inDays}d ago';
+      }
+      if (difference.inHours >= 1) {
+        return '${difference.inHours}h ago';
+      }
+      if (difference.inMinutes >= 1) {
+        return '${difference.inMinutes}m ago';
+      }
+      return 'Just now';
+    } catch (_) {
+      return '';
+    }
   }
 }
 
@@ -6883,7 +7737,7 @@ class PromotedCard extends StatelessWidget {
             .getPublicUrl(storagePath);
       }
     }
-    
+
     // Return sample image for demonstration
     return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop';
   }
@@ -6891,7 +7745,7 @@ class PromotedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = _getImageUrl(listing);
-    
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -6925,11 +7779,12 @@ class PromotedCard extends StatelessWidget {
                     ? Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
-              
+
               // Gradient Overlay
               Container(
                 decoration: BoxDecoration(
@@ -6943,7 +7798,7 @@ class PromotedCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // Content
               Positioned(
                 bottom: 16,
@@ -6989,9 +7844,12 @@ class PromotedCard extends StatelessWidget {
     }
     final parsed = double.tryParse(raw?.toString() ?? '');
     if (parsed == null) return '\$0';
-    return '\$' + (parsed % 1 == 0 ? parsed.toStringAsFixed(0) : parsed.toStringAsFixed(2));
+    return '\$' +
+        (parsed % 1 == 0
+            ? parsed.toStringAsFixed(0)
+            : parsed.toStringAsFixed(2));
   }
-  
+
   Widget _buildPlaceholder() {
     return Container(
       color: AppColors.primary.withOpacity(0.1),
@@ -7023,7 +7881,7 @@ class ListingCard extends StatelessWidget {
             .getPublicUrl(storagePath);
       }
     }
-    
+
     // Return sample image for demonstration
     return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop';
   }
@@ -7045,8 +7903,9 @@ class ListingCard extends StatelessWidget {
       final profile = _profileCache[ownerId];
       if (profile != null) {
         final businessName = profile['business_name']?.toString().trim() ?? '';
-        final contactPerson = profile['contact_person']?.toString().trim() ?? '';
-        
+        final contactPerson =
+            profile['contact_person']?.toString().trim() ?? '';
+
         if (businessName.isNotEmpty) {
           return businessName;
         } else if (contactPerson.isNotEmpty) {
@@ -7068,8 +7927,8 @@ class ListingCard extends StatelessWidget {
             final id = listing['id'];
             if (id != null) {
               try {
-                await Supabase.instance.client
-                    .rpc('track_event', params: {'_listing_id': id, '_type': 'click'});
+                await Supabase.instance.client.rpc('track_event',
+                    params: {'_listing_id': id, '_type': 'click'});
               } catch (_) {}
             }
             Navigator.push(
@@ -7120,7 +7979,8 @@ class ListingCard extends StatelessWidget {
                     ? Image.network(
                         imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
               ),
@@ -7133,7 +7993,8 @@ class ListingCard extends StatelessWidget {
                 children: [
                   Text(
                     listing['title'] ?? 'No title',
-                    style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -7145,7 +8006,10 @@ class ListingCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     _formatPrice(),
-                    style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
+                    style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary),
                   ),
                   const SizedBox(height: 8),
                   // Seller Info
@@ -7158,7 +8022,8 @@ class ListingCard extends StatelessWidget {
                           sellerName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
                         ),
                       ),
                       if (sellerRating > 0) ...[
@@ -7167,7 +8032,8 @@ class ListingCard extends StatelessWidget {
                         const SizedBox(width: 2),
                         Text(
                           sellerRating.toStringAsFixed(1),
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade600),
                         ),
                       ],
                     ],
@@ -7179,13 +8045,15 @@ class ListingCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
+                        Icon(Icons.location_on,
+                            size: 14, color: Colors.grey.shade500),
                         SizedBox(width: kIsWeb ? 2 : 4),
                         Text(
                           _getLocationDisplay(listing),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          style: TextStyle(
+                              fontSize: 12, color: Colors.grey.shade500),
                         ),
                       ],
                     ),
@@ -7216,7 +8084,8 @@ class ListingCard extends StatelessWidget {
                 ? Image.network(
                     imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        _buildPlaceholder(),
                   )
                 : _buildPlaceholder(),
           ),
@@ -7229,7 +8098,8 @@ class ListingCard extends StatelessWidget {
                   listing['title'] ?? 'No title',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                  style: GoogleFonts.poppins(
+                      fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -7243,7 +8113,10 @@ class ListingCard extends StatelessWidget {
                   _formatPrice(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.primary),
+                  style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -7255,7 +8128,8 @@ class ListingCard extends StatelessWidget {
                         sellerName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600),
                       ),
                     ),
                     if (sellerRating > 0) ...[
@@ -7264,7 +8138,8 @@ class ListingCard extends StatelessWidget {
                       const SizedBox(width: 2),
                       Text(
                         sellerRating.toStringAsFixed(1),
-                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade600),
                       ),
                     ],
                   ],
@@ -7273,14 +8148,16 @@ class ListingCard extends StatelessWidget {
                 // Location
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 14, color: Colors.grey.shade500),
+                    Icon(Icons.location_on,
+                        size: 14, color: Colors.grey.shade500),
                     SizedBox(width: kIsWeb ? 2 : 4),
                     Flexible(
                       child: Text(
                         _getLocationDisplay(listing),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade500),
                       ),
                     ),
                   ],
@@ -7309,7 +8186,7 @@ class ListingCard extends StatelessWidget {
     if (listing['distance'] is num) {
       return '${(listing['distance'] as num).toStringAsFixed(1)} mi away';
     }
-    
+
     // Try to get cached profile data
     final ownerId = listing['owner_id'];
     if (ownerId != null && _profileCache.containsKey(ownerId)) {
@@ -7317,7 +8194,7 @@ class ListingCard extends StatelessWidget {
       if (profile != null) {
         final city = profile['city']?.toString().trim() ?? '';
         final state = profile['state']?.toString().trim() ?? '';
-        
+
         if (city.isNotEmpty && state.isNotEmpty) {
           return '$city, $state';
         } else if (city.isNotEmpty) {
@@ -7327,13 +8204,13 @@ class ListingCard extends StatelessWidget {
         }
       }
     }
-    
+
     // Fallback to ZIP code
     final zipCode = (listing['zip_code'] ?? '').toString().trim();
     if (zipCode.isNotEmpty) {
       return zipCode;
     }
-    
+
     return 'â€”';
   }
 
@@ -7342,14 +8219,14 @@ class ListingCard extends StatelessWidget {
 
   Future<void> _loadProfileData(String ownerId) async {
     if (_profileCache.containsKey(ownerId)) return;
-    
+
     try {
       final response = await Supabase.instance.client
           .from('profiles')
           .select('city, state, business_name, contact_person, rating')
           .eq('id', ownerId)
           .maybeSingle();
-      
+
       _profileCache[ownerId] = response;
     } catch (e) {
       _profileCache[ownerId] = null;
@@ -7390,15 +8267,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     // Check for storage paths in listing_photos (actual uploaded images)
     final photos = widget.listing['listing_photos'] as List?;
     if (photos != null && photos.isNotEmpty) {
-      _imageUrls = photos.map((photo) {
-        final storagePath = photo['storage_path'];
-        if (storagePath != null) {
-          return Supabase.instance.client.storage
-              .from('listing-images')
-              .getPublicUrl(storagePath);
-        }
-        return '';
-      }).where((url) => url.isNotEmpty).toList();
+      _imageUrls = photos
+          .map((photo) {
+            final storagePath = photo['storage_path'];
+            if (storagePath != null) {
+              return Supabase.instance.client.storage
+                  .from('listing-images')
+                  .getPublicUrl(storagePath);
+            }
+            return '';
+          })
+          .where((url) => url.isNotEmpty)
+          .toList();
       return;
     }
     // If not present on the listing object, fetch from DB using listing_id
@@ -7422,15 +8302,18 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
           .eq('listing_id', listingId)
           .order('sort_order');
       final photos = List<Map<String, dynamic>>.from(resp ?? []);
-      final urls = photos.map((p) {
-        final sp = p['storage_path'];
-        if (sp != null) {
-          return Supabase.instance.client.storage
-              .from('listing-images')
-              .getPublicUrl(sp);
-        }
-        return '';
-      }).where((u) => u.isNotEmpty).toList();
+      final urls = photos
+          .map((p) {
+            final sp = p['storage_path'];
+            if (sp != null) {
+              return Supabase.instance.client.storage
+                  .from('listing-images')
+                  .getPublicUrl(sp);
+            }
+            return '';
+          })
+          .where((u) => u.isNotEmpty)
+          .toList();
       if (mounted && urls.isNotEmpty) {
         setState(() {
           _imageUrls = urls;
@@ -7503,9 +8386,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
     return 'Location not specified';
   }
 
-
   String _getSellerDescription() {
-    if (_sellerProfile != null && _sellerProfile!['business_description'] != null) {
+    if (_sellerProfile != null &&
+        _sellerProfile!['business_description'] != null) {
       return _sellerProfile!['business_description'];
     }
     return 'Experienced auto parts seller';
@@ -7519,7 +8402,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   }
 
   int _getYearsInBusiness() {
-    if (_sellerProfile != null && _sellerProfile!['years_in_business'] != null) {
+    if (_sellerProfile != null &&
+        _sellerProfile!['years_in_business'] != null) {
       return _sellerProfile!['years_in_business'];
     }
     return 0;
@@ -7529,7 +8413,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
   Widget build(BuildContext context) {
     final sellerRating = _getSellerRating();
     final sellerName = _getSellerName();
-    
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -7556,28 +8440,31 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                               return Image.network(
                                 url,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _buildImagePlaceholder(),
                               );
                             }
                             if (!kIsWeb) {
                               return Image.file(
                                 File(url),
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _buildImagePlaceholder(),
                               );
                             }
                             return _buildImagePlaceholder();
                           },
                         )
                       : _buildImagePlaceholder(),
-                  
+
                   // Image Counter
                   if (_imageUrls.length > 1)
                     Positioned(
                       top: 50,
                       right: 16,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.7),
                           borderRadius: BorderRadius.circular(20),
@@ -7592,7 +8479,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         ),
                       ),
                     ),
-                  
+
                   // Navigation Arrows
                   if (_imageUrls.length > 1) ...[
                     // Previous Arrow
@@ -7624,7 +8511,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                         ),
                       ),
-                    
+
                     // Next Arrow
                     if (_currentImageIndex < _imageUrls.length - 1)
                       Positioned(
@@ -7655,7 +8542,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         ),
                       ),
                   ],
-                  
+
                   // Dot Indicators
                   if (_imageUrls.length > 1)
                     Positioned(
@@ -7692,7 +8579,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
               ),
             ),
           ),
-          
+
           // Content
           SliverToBoxAdapter(
             child: Padding(
@@ -7719,11 +8606,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Condition and Details
-                  _buildDetailRow('Condition', widget.listing['condition'] ?? 'Used'),
+                  _buildDetailRow(
+                      'Condition', widget.listing['condition'] ?? 'Used'),
                   if (widget.listing['distance'] is num)
-                    _buildDetailRow('Distance', '${(widget.listing['distance'] as num).toStringAsFixed(1)} mi'),
+                    _buildDetailRow('Distance',
+                        '${(widget.listing['distance'] as num).toStringAsFixed(1)} mi'),
                   if (widget.listing['category'] != null)
                     _buildDetailRow('Category', widget.listing['category']),
                   if (widget.listing['make'] != null)
@@ -7734,9 +8623,9 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     _buildDetailRow('Year', widget.listing['year'].toString()),
                   if (widget.listing['vin'] != null)
                     _buildDetailRow('VIN', widget.listing['vin']),
-                  
+
                   const SizedBox(height: 20),
-                  
+
                   // Description
                   Text(
                     'Description',
@@ -7748,7 +8637,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.listing['description'] ?? 'No description available.',
+                    widget.listing['description'] ??
+                        'No description available.',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey.shade700,
@@ -7756,7 +8646,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  
+
                   // Seller Info
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -7788,7 +8678,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                 children: [
                                   CircleAvatar(
                                     radius: 25,
-                                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                                    backgroundColor:
+                                        AppColors.primary.withOpacity(0.1),
                                     child: Icon(
                                       Icons.person,
                                       color: AppColors.primary,
@@ -7798,7 +8689,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           sellerName,
@@ -7844,13 +8736,13 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                 ],
                               ),
-                              
+
                               // Additional seller details
                               if (_sellerProfile != null) ...[
                                 const SizedBox(height: 16),
                                 const Divider(),
                                 const SizedBox(height: 12),
-                                
+
                                 // Business description
                                 if (_getSellerDescription().isNotEmpty) ...[
                                   Text(
@@ -7872,14 +8764,15 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                   ),
                                   const SizedBox(height: 12),
                                 ],
-                                
+
                                 // Years in business and specialties
                                 Row(
                                   children: [
                                     if (_getYearsInBusiness() > 0) ...[
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'Experience',
@@ -7902,7 +8795,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                                     ],
                                   ],
                                 ),
-                                
+
                                 // Specialties
                                 if (_getSellerSpecialties().isNotEmpty) ...[
                                   const SizedBox(height: 12),
@@ -7929,7 +8822,7 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                           ),
                   ),
                   const SizedBox(height: 30),
-                  
+
                   // Chat Button
                   SizedBox(
                     width: double.infinity,
@@ -7939,8 +8832,8 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
                         final lid = widget.listing['id'];
                         if (lid != null) {
                           try {
-                            await Supabase.instance.client
-                                .rpc('track_event', params: {'_listing_id': lid, '_type': 'chat'});
+                            await Supabase.instance.client.rpc('track_event',
+                                params: {'_listing_id': lid, '_type': 'chat'});
                           } catch (_) {}
                         }
                         _showChatPrompt(context, widget.listing);
@@ -8046,7 +8939,8 @@ String _formatPrice(String price) {
   return num.toStringAsFixed(0);
 }
 
-Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing) async {
+Future<void> _showChatPrompt(
+    BuildContext context, Map<String, dynamic> listing) async {
   final user = Supabase.instance.client.auth.currentUser;
   if (user == null) {
     // Prompt to sign up/login
@@ -8054,21 +8948,26 @@ Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing)
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign In Required'),
-        content: const Text('You need to sign in to contact sellers and buy items.'),
+        content:
+            const Text('You need to sign in to contact sellers and buy items.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sign In')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sign In')),
         ],
       ),
     );
-    
+
     if (shouldAuth == true) {
       context.go('/auth');
     }
     return;
   }
 
-  // 
+  //
   // Enforce profile completion for buyers before starting chat
   try {
     final profile = await Supabase.instance.client
@@ -8085,10 +8984,15 @@ Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing)
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Complete Your Profile'),
-          content: const Text('Please complete your profile before contacting sellers.'),
+          content: const Text(
+              'Please complete your profile before contacting sellers.'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Later')),
-            ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Complete Profile')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Later')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Complete Profile')),
           ],
         ),
       );
@@ -8105,10 +9009,15 @@ Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing)
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Complete Your Profile'),
-          content: const Text('Please complete your profile before contacting sellers.'),
+          content: const Text(
+              'Please complete your profile before contacting sellers.'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Later')),
-            ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Complete Profile')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Later')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Complete Profile')),
           ],
         ),
       );
@@ -8140,7 +9049,7 @@ Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing)
         .maybeSingle();
 
     String conversationId;
-    
+
     if (existingConversation != null) {
       conversationId = existingConversation['id'];
     } else {
@@ -8154,7 +9063,7 @@ Future<void> _showChatPrompt(BuildContext context, Map<String, dynamic> listing)
           })
           .select()
           .single();
-      
+
       conversationId = newConversation['id'];
     }
 
@@ -8214,12 +9123,12 @@ class _AuthPageState extends State<AuthPage> {
   bool _isSignUp = false;
   bool _loading = false;
   String? _error;
-  
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   String _userType = 'buyer'; // buyer or seller
 
   @override
@@ -8232,7 +9141,7 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _authenticate() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    
+
     setState(() {
       _loading = true;
       _error = null;
@@ -8248,11 +9157,11 @@ class _AuthPageState extends State<AuthPage> {
             'user_type': _userType,
           },
         );
-        
+
         if (response.user != null) {
           // Sign out the user immediately after signup
           await Supabase.instance.client.auth.signOut();
-          
+
           // Show email confirmation message
           if (mounted) {
             showDialog(
@@ -8284,7 +9193,7 @@ class _AuthPageState extends State<AuthPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-        
+
         if (mounted) {
           final user = response.user;
           if (user != null) {
@@ -8294,8 +9203,9 @@ class _AuthPageState extends State<AuthPage> {
                 .select('profile_completed')
                 .eq('id', user.id)
                 .maybeSingle();
-            
-            if (profileResponse == null || profileResponse['profile_completed'] != true) {
+
+            if (profileResponse == null ||
+                profileResponse['profile_completed'] != true) {
               // User needs to complete profile
               context.go('/complete-profile');
             } else {
@@ -8315,7 +9225,7 @@ class _AuthPageState extends State<AuthPage> {
       });
     }
   }
- 
+
   Future<void> _forgotPassword() async {
     String email = _emailController.text.trim();
     final emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,4}$');
@@ -8334,8 +9244,12 @@ class _AuthPageState extends State<AuthPage> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(context, ctrl.text.trim()), child: const Text('Send')),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+                child: const Text('Send')),
           ],
         ),
       );
@@ -8343,7 +9257,9 @@ class _AuthPageState extends State<AuthPage> {
     }
     if (email.isEmpty || !emailRegex.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid email to reset your password.')),
+        const SnackBar(
+            content:
+                Text('Please enter a valid email to reset your password.')),
       );
       return;
     }
@@ -8356,20 +9272,28 @@ class _AuthPageState extends State<AuthPage> {
         // Ensure we're using the full URL with the reset-password path
         redirect = '$origin/reset-password';
       }
-      await Supabase.instance.client.auth.resetPasswordForEmail(email, redirectTo: redirect);
+      await Supabase.instance.client.auth
+          .resetPasswordForEmail(email, redirectTo: redirect);
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Check your email'),
-          content: Text("If an account exists for $email, we've sent a password reset link."),
-          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+          content: Text(
+              "If an account exists for $email, we've sent a password reset link."),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'))
+          ],
         ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send reset email: ${e.toString().replaceAll('Exception: ', '')}')),
+        SnackBar(
+            content: Text(
+                'Failed to send reset email: ${e.toString().replaceAll('Exception: ', '')}')),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -8408,10 +9332,14 @@ class _AuthPageState extends State<AuthPage> {
                   size: 50,
                   color: Colors.white,
                 ),
-              ).animate().scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), duration: 600.ms, curve: Curves.elasticOut),
-              
+              ).animate().scale(
+                  begin: const Offset(0.9, 0.9),
+                  end: const Offset(1.0, 1.0),
+                  duration: 600.ms,
+                  curve: Curves.elasticOut),
+
               const SizedBox(height: 24),
-              
+
               Text(
                 _isSignUp ? 'Join Mechanic Part' : 'Welcome Back',
                 style: GoogleFonts.poppins(
@@ -8421,11 +9349,11 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
-                _isSignUp 
+                _isSignUp
                     ? 'Create your account to start buying and selling'
                     : 'Sign in to your account',
                 style: TextStyle(
@@ -8434,9 +9362,9 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Error message
               if (_error != null) ...[
                 Container(
@@ -8461,7 +9389,7 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               // User type selection (only for sign up)
               if (_isSignUp) ...[
                 Text(
@@ -8498,7 +9426,7 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 24),
               ],
-              
+
               // Email field
               TextFormField(
                 controller: _emailController,
@@ -8515,15 +9443,16 @@ class _AuthPageState extends State<AuthPage> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your email';
                   }
-                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                      .hasMatch(value)) {
                     return 'Please enter a valid email';
                   }
                   return null;
                 },
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Password field
               TextFormField(
                 controller: _passwordController,
@@ -8581,9 +9510,9 @@ class _AuthPageState extends State<AuthPage> {
                   },
                 ),
               ],
-              
+
               const SizedBox(height: 24),
-              
+
               // Submit button
               ElevatedButton(
                 onPressed: _loading ? null : _authenticate,
@@ -8601,7 +9530,8 @@ class _AuthPageState extends State<AuthPage> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : Text(
@@ -8612,15 +9542,15 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                       ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Toggle between sign in and sign up
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    _isSignUp 
+                    _isSignUp
                         ? 'Already have an account? '
                         : "Don't have an account? ",
                     style: TextStyle(color: Colors.grey.shade600),
@@ -8652,11 +9582,11 @@ class _AuthPageState extends State<AuthPage> {
 }
 
 class _UserTypeCard extends StatelessWidget {
-    final String title;
-    final String description;
-    final IconData icon;
-    final bool selected;
-    final VoidCallback onTap;
+  final String title;
+  final String description;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
 
   const _UserTypeCard({
     super.key,
@@ -8713,6 +9643,7 @@ class _UserTypeCard extends StatelessWidget {
     );
   }
 }
+
 // ===== Seller: My Products Page =====
 class MyProductsPage extends StatefulWidget {
   const MyProductsPage({super.key});
@@ -8756,14 +9687,11 @@ class _MyProductsPageState extends State<MyProductsPage> {
         }
         return;
       }
-      final response = await Supabase.instance.client
-          .from('listings')
-          .select('''
+      final response =
+          await Supabase.instance.client.from('listings').select('''
             *,
             listing_photos(storage_path, sort_order)
-          ''')
-          .eq('owner_id', user.id)
-          .order('created_at', ascending: false);
+          ''').eq('owner_id', user.id).order('created_at', ascending: false);
       if (mounted) {
         setState(() {
           _myListings = List<Map<String, dynamic>>.from(response);
@@ -8780,7 +9708,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
     }
   }
 
-  Future<void> _updateStatus(Map<String, dynamic> listing, String status) async {
+  Future<void> _updateStatus(
+      Map<String, dynamic> listing, String status) async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) {
@@ -8807,9 +9736,12 @@ class _MyProductsPageState extends State<MyProductsPage> {
         });
       } catch (e) {
         final msg = e.toString();
-        final fnMissing = msg.contains('42883') || msg.contains('function update_listing_status');
+        final fnMissing = msg.contains('42883') ||
+            msg.contains('function update_listing_status');
         // 42804: datatype mismatch (e.g., enum column vs text param)
-        final enumTypeMismatch = msg.contains('42804') || msg.contains('is of type') && msg.contains('but expression is of type');
+        final enumTypeMismatch = msg.contains('42804') ||
+            msg.contains('is of type') &&
+                msg.contains('but expression is of type');
         if (fnMissing || enumTypeMismatch) {
           await client
               .from('listings')
@@ -8845,9 +9777,9 @@ class _MyProductsPageState extends State<MyProductsPage> {
             .select('profile_completed')
             .eq('id', user.id)
             .maybeSingle();
-        
+
         final profileCompleted = response?['profile_completed'] ?? false;
-        
+
         if (!profileCompleted) {
           // Show dialog prompting to complete profile
           if (mounted) {
@@ -8868,7 +9800,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
                     onPressed: () {
                       Navigator.pop(context);
                       // Navigate to profile page
-                      final homeShell = context.findAncestorStateOfType<_HomeShellState>();
+                      final homeShell =
+                          context.findAncestorStateOfType<_HomeShellState>();
                       if (homeShell != null) {
                         homeShell.switchToTab(3); // Profile tab
                       }
@@ -8889,24 +9822,28 @@ class _MyProductsPageState extends State<MyProductsPage> {
         // If error checking profile, still allow listing creation
       }
     }
-    
+
     // Profile is complete or check failed, proceed with listing creation
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Create Listing')),
-          body: const ListingForm(),
-        ),
-      ),
-    ).then((_) => _loadMyListings());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: const Text('Create Listing')),
+              body: const ListingForm(),
+            ),
+          ),
+        )
+        .then((_) => _loadMyListings());
   }
 
   void _openEditListing(Map<String, dynamic> listing) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => EditListingPage(listing: listing),
-      ),
-    ).then((_) => _loadMyListings());
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => EditListingPage(listing: listing),
+          ),
+        )
+        .then((_) => _loadMyListings());
   }
 
   Future<void> _loadPlanAndUsage() async {
@@ -8970,12 +9907,14 @@ class _MyProductsPageState extends State<MyProductsPage> {
     if (_busyAction) return;
     setState(() => _busyAction = true);
     try {
-      await Supabase.instance.client
-          .rpc('set_featured', params: {'_listing_id': listing['id'], '_enabled': enabled});
+      await Supabase.instance.client.rpc('set_featured',
+          params: {'_listing_id': listing['id'], '_enabled': enabled});
       await _loadMyListings();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(enabled ? 'Marked as Featured' : 'Removed from Featured')),
+          SnackBar(
+              content: Text(
+                  enabled ? 'Marked as Featured' : 'Removed from Featured')),
         );
       }
     } catch (e) {
@@ -9009,7 +9948,8 @@ class _MyProductsPageState extends State<MyProductsPage> {
     return Container(
       width: 60,
       height: 60,
-      decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+          color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
       child: const Icon(Icons.inventory_2, color: Colors.grey),
     );
   }
@@ -9031,33 +9971,43 @@ class _MyProductsPageState extends State<MyProductsPage> {
           : _error != null
               ? Center(child: Text(_error!))
               : _myListings.isEmpty
-                  ? const Center(child: Text('You have not listed any products yet'))
+                  ? const Center(
+                      child: Text('You have not listed any products yet'))
                   : ListView.separated(
                       padding: const EdgeInsets.all(12),
                       itemCount: _myListings.length + 1,
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         if (index == 0) {
-                          final featuredCount = _myListings.where((e) => (e['is_featured'] ?? false) == true).length;
+                          final featuredCount = _myListings
+                              .where((e) => (e['is_featured'] ?? false) == true)
+                              .length;
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.workspace_premium, color: AppColors.primary),
+                                  const Icon(Icons.workspace_premium,
+                                      color: AppColors.primary),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Text('Plan: ${_activePlanId ?? 'free'}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        Text('Plan: ${_activePlanId ?? 'free'}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w600)),
                                         const SizedBox(height: 4),
-                                        Text('Boosts: $_boostsUsed / $_monthlyBoosts  •  Featured used: $featuredCount / $_featuredSlots'),
+                                        Text(
+                                            'Boosts: $_boostsUsed / $_monthlyBoosts  •  Featured used: $featuredCount / $_featuredSlots'),
                                       ],
                                     ),
                                   ),
                                   TextButton(
-                                    onPressed: _busyAction ? null : () => _loadPlanAndUsage(),
+                                    onPressed: _busyAction
+                                        ? null
+                                        : () => _loadPlanAndUsage(),
                                     child: const Text('Refresh'),
                                   ),
                                 ],
@@ -9068,8 +10018,10 @@ class _MyProductsPageState extends State<MyProductsPage> {
                         final listing = _myListings[index - 1];
                         return ListTile(
                           leading: _buildThumb(listing),
-                          title: Text(listing['title'] ?? 'Untitled', maxLines: 1, overflow: TextOverflow.ellipsis),
-                          subtitle: Text('Status: ${listing['status'] ?? 'unknown'}  |  USD ${(listing['price_usd'] ?? 0).toString()}'),
+                          title: Text(listing['title'] ?? 'Untitled',
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          subtitle: Text(
+                              'Status: ${listing['status'] ?? 'unknown'}  |  USD ${(listing['price_usd'] ?? 0).toString()}'),
                           onTap: () => _openEditListing(listing),
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) {
@@ -9091,18 +10043,30 @@ class _MyProductsPageState extends State<MyProductsPage> {
                             },
                             itemBuilder: (context) {
                               final items = <PopupMenuEntry<String>>[
-                                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                const PopupMenuItem(value: 'sold', child: Text('Mark as Sold')),
-                                const PopupMenuItem(value: 'active', child: Text('Mark as Active')),
-                                const PopupMenuItem(value: 'draft', child: Text('Mark as Draft')),
+                                const PopupMenuItem(
+                                    value: 'edit', child: Text('Edit')),
+                                const PopupMenuItem(
+                                    value: 'sold', child: Text('Mark as Sold')),
+                                const PopupMenuItem(
+                                    value: 'active',
+                                    child: Text('Mark as Active')),
+                                const PopupMenuItem(
+                                    value: 'draft',
+                                    child: Text('Mark as Draft')),
                                 const PopupMenuDivider(),
-                                const PopupMenuItem(value: 'boost', child: Text('Boost (24-72h)')),
+                                const PopupMenuItem(
+                                    value: 'boost',
+                                    child: Text('Boost (24-72h)')),
                               ];
-                              final isFeatured = (listing['is_featured'] ?? false) == true;
+                              final isFeatured =
+                                  (listing['is_featured'] ?? false) == true;
                               items.add(
                                 PopupMenuItem(
-                                  value: isFeatured ? 'feature_off' : 'feature_on',
-                                  child: Text(isFeatured ? 'Remove Featured' : 'Mark as Featured'),
+                                  value:
+                                      isFeatured ? 'feature_off' : 'feature_on',
+                                  child: Text(isFeatured
+                                      ? 'Remove Featured'
+                                      : 'Mark as Featured'),
                                 ),
                               );
                               return items;
@@ -9134,9 +10098,12 @@ class _EditListingPageState extends State<EditListingPage> {
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.listing['title'] ?? '');
-    _descriptionController = TextEditingController(text: widget.listing['description'] ?? '');
-    _priceController = TextEditingController(text: (widget.listing['price_usd'] ?? '').toString());
+    _titleController =
+        TextEditingController(text: widget.listing['title'] ?? '');
+    _descriptionController =
+        TextEditingController(text: widget.listing['description'] ?? '');
+    _priceController = TextEditingController(
+        text: (widget.listing['price_usd'] ?? '').toString());
     _status = widget.listing['status'] ?? 'active';
   }
 
@@ -9197,7 +10164,10 @@ class _EditListingPageState extends State<EditListingPage> {
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
-                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Text('Save'),
           )
         ],
@@ -9212,7 +10182,8 @@ class _EditListingPageState extends State<EditListingPage> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Title'),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Title is required' : null,
+                validator: (v) =>
+                    v == null || v.trim().isEmpty ? 'Title is required' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -9225,7 +10196,9 @@ class _EditListingPageState extends State<EditListingPage> {
                 controller: _priceController,
                 decoration: const InputDecoration(labelText: 'Price (USD)'),
                 keyboardType: TextInputType.number,
-                validator: (v) => (double.tryParse(v ?? '') == null) ? 'Enter a valid price' : null,
+                validator: (v) => (double.tryParse(v ?? '') == null)
+                    ? 'Enter a valid price'
+                    : null,
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -9245,6 +10218,3 @@ class _EditListingPageState extends State<EditListingPage> {
     );
   }
 }
-
-
-

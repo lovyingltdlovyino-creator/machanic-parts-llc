@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminPage extends StatefulWidget {
@@ -35,6 +34,10 @@ class _AdminPageState extends State<AdminPage> {
   final TextEditingController _userSearchCtl = TextEditingController();
   int _userLimit = 25;
   int _userOffset = 0;
+  final TextEditingController _broadcastTitleCtl = TextEditingController();
+  final TextEditingController _broadcastBodyCtl = TextEditingController();
+  String _broadcastAudience = 'both';
+  bool _sendingBroadcast = false;
 
   @override
   void initState() {
@@ -96,7 +99,8 @@ class _AdminPageState extends State<AdminPage> {
             isAdmin = true;
           } else if (vRole is String && vRole.toLowerCase() == 'admin') {
             isAdmin = true;
-          } else if (vUserType is String && vUserType.toLowerCase() == 'admin') {
+          } else if (vUserType is String &&
+              vUserType.toLowerCase() == 'admin') {
             isAdmin = true;
           }
         }
@@ -130,7 +134,8 @@ class _AdminPageState extends State<AdminPage> {
 
       setState(() {
         _isAdmin = isAdmin;
-        _subscriptionsEnabled = (config?['subscriptions_enabled'] ?? false) == true;
+        _subscriptionsEnabled =
+            (config?['subscriptions_enabled'] ?? false) == true;
         _freeCap = (config?['free_cap_override'] ?? 2) as int;
         _plans = List<Map<String, dynamic>>.from(plans);
         _loading = false;
@@ -154,7 +159,8 @@ class _AdminPageState extends State<AdminPage> {
   Future<void> _saveEnabled(bool enabled) async {
     setState(() => _saving = true);
     try {
-      await _client.rpc('set_subscriptions_enabled', params: {'_enabled': enabled});
+      await _client
+          .rpc('set_subscriptions_enabled', params: {'_enabled': enabled});
       setState(() => _subscriptionsEnabled = enabled);
       _snack('Updated gating to ${enabled ? 'ENABLED' : 'DISABLED'}');
     } catch (e) {
@@ -183,16 +189,24 @@ class _AdminPageState extends State<AdminPage> {
 
   // ===================== Dashboard =====================
   Future<void> _loadMetrics() async {
-    setState(() { _loadingMetrics = true; });
+    setState(() {
+      _loadingMetrics = true;
+    });
     try {
       final resp = await _client.rpc('admin_get_metrics');
       if (resp is Map<String, dynamic>) {
-        setState(() { _metrics = resp; _metricsTs = DateTime.now(); });
+        setState(() {
+          _metrics = resp;
+          _metricsTs = DateTime.now();
+        });
       }
     } catch (e) {
       _snack('Failed to load metrics: $e');
     } finally {
-      if (mounted) setState(() { _loadingMetrics = false; });
+      if (mounted)
+        setState(() {
+          _loadingMetrics = false;
+        });
     }
   }
 
@@ -224,9 +238,12 @@ class _AdminPageState extends State<AdminPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  Text(label,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey)),
                   const SizedBox(height: 4),
-                  Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  Text(value,
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
@@ -238,11 +255,18 @@ class _AdminPageState extends State<AdminPage> {
 
   // ===================== Users =====================
   Future<void> _loadUsers({bool reset = false}) async {
-    if (reset) { _userOffset = 0; _users = const []; }
-    setState(() { _loadingUsers = true; });
+    if (reset) {
+      _userOffset = 0;
+      _users = const [];
+    }
+    setState(() {
+      _loadingUsers = true;
+    });
     try {
       final resp = await _client.rpc('admin_list_users', params: {
-        'search': _userSearchCtl.text.trim().isEmpty ? null : _userSearchCtl.text.trim(),
+        'search': _userSearchCtl.text.trim().isEmpty
+            ? null
+            : _userSearchCtl.text.trim(),
         'p_limit': _userLimit,
         'p_offset': _userOffset,
       });
@@ -254,7 +278,10 @@ class _AdminPageState extends State<AdminPage> {
     } catch (e) {
       _snack('Failed to load users: $e');
     } finally {
-      if (mounted) setState(() { _loadingUsers = false; });
+      if (mounted)
+        setState(() {
+          _loadingUsers = false;
+        });
     }
   }
 
@@ -274,75 +301,91 @@ class _AdminPageState extends State<AdminPage> {
 
   Future<void> _openEditPlanDialog(Map<String, dynamic> plan) async {
     final planId = plan['plan_id'] as String;
-    final maxListingsCtl = TextEditingController(text: (plan['max_active_listings'] ?? '').toString());
-    final rankWeightCtl = TextEditingController(text: (plan['ranking_weight'] ?? '').toString());
-    final featuredSlotsCtl = TextEditingController(text: (plan['featured_slots'] ?? '').toString());
-    final monthlyBoostsCtl = TextEditingController(text: (plan['monthly_boosts'] ?? '').toString());
-    final boostMultiplierCtl = TextEditingController(text: (plan['boost_multiplier'] ?? '').toString());
-    final boostHoursCtl = TextEditingController(text: (plan['boost_hours'] ?? '').toString());
+    final maxListingsCtl = TextEditingController(
+        text: (plan['max_active_listings'] ?? '').toString());
+    final rankWeightCtl =
+        TextEditingController(text: (plan['ranking_weight'] ?? '').toString());
+    final featuredSlotsCtl =
+        TextEditingController(text: (plan['featured_slots'] ?? '').toString());
+    final monthlyBoostsCtl =
+        TextEditingController(text: (plan['monthly_boosts'] ?? '').toString());
+    final boostMultiplierCtl = TextEditingController(
+        text: (plan['boost_multiplier'] ?? '').toString());
+    final boostHoursCtl =
+        TextEditingController(text: (plan['boost_hours'] ?? '').toString());
     bool leadAccess = (plan['lead_access'] ?? false) == true;
     String analyticsLevel = (plan['analytics_level'] ?? 'none') as String;
 
     final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text('Edit plan: $planId'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _numField('Max active listings', maxListingsCtl),
-                const SizedBox(height: 8),
-                _numField('Ranking weight', rankWeightCtl),
-                const SizedBox(height: 8),
-                _numField('Featured slots', featuredSlotsCtl),
-                const SizedBox(height: 8),
-                _numField('Monthly boosts', monthlyBoostsCtl),
-                const SizedBox(height: 8),
-                _numField('Boost multiplier', boostMultiplierCtl),
-                const SizedBox(height: 8),
-                _numField('Boost hours', boostHoursCtl),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Expanded(child: Text('Lead access')),
-                    StatefulBuilder(
-                      builder: (context, setSB) => Switch(
-                        value: leadAccess,
-                        onChanged: (v) => setSB(() { leadAccess = v; }),
+        context: context,
+        builder: (ctx) {
+          return AlertDialog(
+            title: Text('Edit plan: $planId'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _numField('Max active listings', maxListingsCtl),
+                  const SizedBox(height: 8),
+                  _numField('Ranking weight', rankWeightCtl),
+                  const SizedBox(height: 8),
+                  _numField('Featured slots', featuredSlotsCtl),
+                  const SizedBox(height: 8),
+                  _numField('Monthly boosts', monthlyBoostsCtl),
+                  const SizedBox(height: 8),
+                  _numField('Boost multiplier', boostMultiplierCtl),
+                  const SizedBox(height: 8),
+                  _numField('Boost hours', boostHoursCtl),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Expanded(child: Text('Lead access')),
+                      StatefulBuilder(
+                        builder: (context, setSB) => Switch(
+                          value: leadAccess,
+                          onChanged: (v) => setSB(() {
+                            leadAccess = v;
+                          }),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Text('Analytics'),
-                    const SizedBox(width: 12),
-                    StatefulBuilder(
-                      builder: (context, setSB) => DropdownButton<String>(
-                        value: analyticsLevel,
-                        items: const [
-                          DropdownMenuItem(value: 'none', child: Text('None')),
-                          DropdownMenuItem(value: 'basic', child: Text('Basic')),
-                          DropdownMenuItem(value: 'advanced', child: Text('Advanced')),
-                        ],
-                        onChanged: (v) => setSB(() { if (v != null) analyticsLevel = v; }),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Text('Analytics'),
+                      const SizedBox(width: 12),
+                      StatefulBuilder(
+                        builder: (context, setSB) => DropdownButton<String>(
+                          value: analyticsLevel,
+                          items: const [
+                            DropdownMenuItem(
+                                value: 'none', child: Text('None')),
+                            DropdownMenuItem(
+                                value: 'basic', child: Text('Basic')),
+                            DropdownMenuItem(
+                                value: 'advanced', child: Text('Advanced')),
+                          ],
+                          onChanged: (v) => setSB(() {
+                            if (v != null) analyticsLevel = v;
+                          }),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-          ],
-        );
-      }
-    );
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel')),
+              ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Save')),
+            ],
+          );
+        });
 
     if (result != true) return;
 
@@ -359,10 +402,16 @@ class _AdminPageState extends State<AdminPage> {
         'analytics_level': analyticsLevel,
         'updated_at': DateTime.now().toIso8601String(),
       };
-      await _client.from('plan_capabilities').update(payload).eq('plan_id', planId);
+      await _client
+          .from('plan_capabilities')
+          .update(payload)
+          .eq('plan_id', planId);
       // refresh list
-      final plans = await _client.from('plan_capabilities').select('*').order('plan_id');
-      setState(() { _plans = List<Map<String, dynamic>>.from(plans); });
+      final plans =
+          await _client.from('plan_capabilities').select('*').order('plan_id');
+      setState(() {
+        _plans = List<Map<String, dynamic>>.from(plans);
+      });
       _snack('Updated $planId');
     } catch (e) {
       _snack('Failed to update plan: $e');
@@ -383,51 +432,108 @@ class _AdminPageState extends State<AdminPage> {
     );
   }
 
+  Future<void> _sendBroadcast() async {
+    final title = _broadcastTitleCtl.text.trim();
+    final body = _broadcastBodyCtl.text.trim();
+    if (title.isEmpty || body.isEmpty) {
+      _snack('Enter both a title and message body');
+      return;
+    }
+
+    setState(() => _sendingBroadcast = true);
+    try {
+      final result = await _client.functions.invoke(
+        'sendPushNotification',
+        body: {
+          'type': 'admin_broadcast',
+          'title': title,
+          'body': body,
+          'audience': _broadcastAudience,
+        },
+      );
+      final data = result.data;
+      final recipients =
+          data is Map<String, dynamic> ? data['recipients'] : null;
+      _snack(
+          'Broadcast sent${recipients != null ? ' to $recipients users' : ''}');
+      _broadcastTitleCtl.clear();
+      _broadcastBodyCtl.clear();
+    } catch (e) {
+      _snack('Failed to send broadcast: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _sendingBroadcast = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _userSearchCtl.dispose();
+    _broadcastTitleCtl.dispose();
+    _broadcastBodyCtl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        bottom: const TabBar(
-          isScrollable: true,
-          tabs: [
-            Tab(text: 'Dashboard', icon: Icon(Icons.dashboard_outlined)),
-            Tab(text: 'Users', icon: Icon(Icons.people_alt_outlined)),
-            Tab(text: 'Settings', icon: Icon(Icons.settings_outlined)),
+        appBar: AppBar(
+          title: const Text('Admin Dashboard'),
+          bottom: const TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(text: 'Dashboard', icon: Icon(Icons.dashboard_outlined)),
+              Tab(text: 'Users', icon: Icon(Icons.people_alt_outlined)),
+              Tab(text: 'Broadcasts', icon: Icon(Icons.campaign_outlined)),
+              Tab(text: 'Settings', icon: Icon(Icons.settings_outlined)),
+            ],
+          ),
+          actions: [
+            IconButton(
+              onPressed: _loadingMetrics ? null : _loadMetrics,
+              tooltip: 'Refresh metrics',
+              icon: _loadingMetrics
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh),
+            ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _loadingMetrics ? null : _loadMetrics,
-            tooltip: 'Refresh metrics',
-            icon: _loadingMetrics ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.refresh),
-          ),
-        ],
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : !_isAdmin
+                ? const Center(child: Text('Not authorized. Admins only.'))
+                : TabBarView(
+                    children: [
+                      // ================= Dashboard =================
+                      _buildDashboardTab(),
+                      // ================= Users =====================
+                      _buildUsersTab(),
+                      // ================= Broadcasts ================
+                      _buildBroadcastsTab(),
+                      // ================= Settings ==================
+                      _buildSettingsTab(),
+                    ],
+                  ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : !_isAdmin
-              ? const Center(child: Text('Not authorized. Admins only.'))
-              : TabBarView(
-                  children: [
-                    // ================= Dashboard =================
-                    _buildDashboardTab(),
-                    // ================= Users =====================
-                    _buildUsersTab(),
-                    // ================= Settings ==================
-                    _buildSettingsTab(),
-                  ],
-                ),
-    ),
     );
   }
 
   Widget _buildDashboardTab() {
     final m = _metrics ?? const {};
     final width = MediaQuery.of(context).size.width;
-    final columns = width >= 1400 ? 4 : width >= 1000 ? 3 : width >= 700 ? 2 : 1;
+    final columns = width >= 1400
+        ? 4
+        : width >= 1000
+            ? 3
+            : width >= 700
+                ? 2
+                : 1;
 
     String fmtNum(dynamic v) {
       if (v == null) return '0';
@@ -468,22 +574,53 @@ class _AdminPageState extends State<AdminPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              _metricCard(icon: Icons.people_alt, label: 'Users', value: fmtNum(m['total_users'])),
-              _metricCard(icon: Icons.store_mall_directory, label: 'Sellers', value: fmtNum(m['sellers'])),
-              _metricCard(icon: Icons.person_outline, label: 'Buyers', value: fmtNum(m['buyers'])),
-              _metricCard(icon: Icons.admin_panel_settings, label: 'Admins', value: fmtNum(m['admins'])),
-              _metricCard(icon: Icons.list_alt, label: 'Listings (active)', value: fmtNum(m['active_listings'])),
-              _metricCard(icon: Icons.star, label: 'Featured', value: fmtNum(m['featured_listings'])),
-              _metricCard(icon: Icons.block, label: 'Blocked users', value: fmtNum(m['blocked_users']), color: Colors.red),
-              _metricCard(icon: Icons.shopping_bag, label: 'Paid subscribers', value: fmtNum(m['paid_subscribers']), color: Colors.green),
-              _metricCard(icon: Icons.attach_money, label: 'Est. MRR (USD)', value: fmtUsd(m['estimated_mrr_usd'])),
+              _metricCard(
+                  icon: Icons.people_alt,
+                  label: 'Users',
+                  value: fmtNum(m['total_users'])),
+              _metricCard(
+                  icon: Icons.store_mall_directory,
+                  label: 'Sellers',
+                  value: fmtNum(m['sellers'])),
+              _metricCard(
+                  icon: Icons.person_outline,
+                  label: 'Buyers',
+                  value: fmtNum(m['buyers'])),
+              _metricCard(
+                  icon: Icons.admin_panel_settings,
+                  label: 'Admins',
+                  value: fmtNum(m['admins'])),
+              _metricCard(
+                  icon: Icons.list_alt,
+                  label: 'Listings (active)',
+                  value: fmtNum(m['active_listings'])),
+              _metricCard(
+                  icon: Icons.star,
+                  label: 'Featured',
+                  value: fmtNum(m['featured_listings'])),
+              _metricCard(
+                  icon: Icons.block,
+                  label: 'Blocked users',
+                  value: fmtNum(m['blocked_users']),
+                  color: Colors.red),
+              _metricCard(
+                  icon: Icons.shopping_bag,
+                  label: 'Paid subscribers',
+                  value: fmtNum(m['paid_subscribers']),
+                  color: Colors.green),
+              _metricCard(
+                  icon: Icons.attach_money,
+                  label: 'Est. MRR (USD)',
+                  value: fmtUsd(m['estimated_mrr_usd'])),
             ],
           ),
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              _metricsTs == null ? '' : 'Updated: ${_metricsTs!.toLocal().toString().split('.')..removeLast()}',
+              _metricsTs == null
+                  ? ''
+                  : 'Updated: ${_metricsTs!.toLocal().toString().split('.')..removeLast()}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
@@ -515,7 +652,11 @@ class _AdminPageState extends State<AdminPage> {
               ElevatedButton.icon(
                 onPressed: _loadingUsers ? null : () => _loadUsers(reset: true),
                 icon: _loadingUsers
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
                     : const Icon(Icons.refresh),
                 label: const Text('Refresh'),
               ),
@@ -537,23 +678,32 @@ class _AdminPageState extends State<AdminPage> {
                       ],
                       rows: _users.map((u) {
                         final email = (u['email'] ?? '').toString();
-                        final name = ((u['business_name'] ?? '') as String).isNotEmpty
-                            ? u['business_name']
-                            : (u['contact_person'] ?? '');
-                        final cityState = [u['city'], u['state']].where((e) => (e ?? '').toString().isNotEmpty).join(', ');
+                        final name =
+                            ((u['business_name'] ?? '') as String).isNotEmpty
+                                ? u['business_name']
+                                : (u['contact_person'] ?? '');
+                        final cityState = [u['city'], u['state']]
+                            .where((e) => (e ?? '').toString().isNotEmpty)
+                            .join(', ');
                         final plan = (u['active_plan_id'] ?? 'free').toString();
                         final blocked = (u['admin_blocked'] ?? false) == true;
                         return DataRow(cells: [
-                          DataCell(Text(email, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          DataCell(Text(email,
+                              maxLines: 1, overflow: TextOverflow.ellipsis)),
                           DataCell(Text(name.toString())),
                           DataCell(Text(cityState)),
                           DataCell(Text(plan.toUpperCase())),
-                          DataCell(Icon(blocked ? Icons.block : Icons.check_circle, color: blocked ? Colors.red : Colors.green, size: 18)),
+                          DataCell(Icon(
+                              blocked ? Icons.block : Icons.check_circle,
+                              color: blocked ? Colors.red : Colors.green,
+                              size: 18)),
                           DataCell(Row(
                             children: [
                               TextButton.icon(
-                                onPressed: () => _toggleBan(u['id'].toString(), !blocked),
-                                icon: Icon(blocked ? Icons.lock_open : Icons.block),
+                                onPressed: () =>
+                                    _toggleBan(u['id'].toString(), !blocked),
+                                icon: Icon(
+                                    blocked ? Icons.lock_open : Icons.block),
                                 label: Text(blocked ? 'Unban' : 'Ban'),
                               ),
                             ],
@@ -596,7 +746,8 @@ class _AdminPageState extends State<AdminPage> {
                 child: TextFormField(
                   initialValue: _freeCap.toString(),
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  decoration:
+                      const InputDecoration(border: OutlineInputBorder()),
                   onFieldSubmitted: (v) {
                     final parsed = int.tryParse(v.trim());
                     if (parsed != null && parsed >= 0) {
@@ -612,10 +763,13 @@ class _AdminPageState extends State<AdminPage> {
           const SizedBox(height: 16),
           const Text('Notes:', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          const Text('- When gating is disabled, all limits are bypassed (non-breaking rollout).'),
-          const Text('- Free cap applies only when gating is enabled and plan is Free.'),
+          const Text(
+              '- When gating is disabled, all limits are bypassed (non-breaking rollout).'),
+          const Text(
+              '- Free cap applies only when gating is enabled and plan is Free.'),
           const Divider(height: 32),
-          const Text('Plan Capabilities', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          const Text('Plan Capabilities',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
           const SizedBox(height: 12),
           if (_plans.isEmpty)
             const Text('No plan_capabilities rows found.')
@@ -644,7 +798,9 @@ class _AdminPageState extends State<AdminPage> {
                     DataCell(Text(p['monthly_boosts'].toString())),
                     DataCell(Text(p['boost_multiplier'].toString())),
                     DataCell(Text(p['boost_hours'].toString())),
-                    DataCell(Icon((p['lead_access'] ?? false) ? Icons.check : Icons.close, size: 18)),
+                    DataCell(Icon(
+                        (p['lead_access'] ?? false) ? Icons.check : Icons.close,
+                        size: 18)),
                     DataCell(Text((p['analytics_level'] ?? '').toString())),
                     DataCell(IconButton(
                       icon: const Icon(Icons.edit),
@@ -654,6 +810,85 @@ class _AdminPageState extends State<AdminPage> {
                 }).toList(),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBroadcastsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: ListView(
+        children: [
+          const Text(
+            'Send a push notification to buyers, sellers, or everyone.',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _broadcastAudience,
+            decoration: const InputDecoration(
+              labelText: 'Audience',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'both', child: Text('All users')),
+              DropdownMenuItem(value: 'seller', child: Text('Sellers only')),
+              DropdownMenuItem(value: 'buyer', child: Text('Buyers only')),
+            ],
+            onChanged: _sendingBroadcast
+                ? null
+                : (value) {
+                    if (value != null) {
+                      setState(() => _broadcastAudience = value);
+                    }
+                  },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _broadcastTitleCtl,
+            enabled: !_sendingBroadcast,
+            decoration: const InputDecoration(
+              labelText: 'Notification title',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _broadcastBodyCtl,
+            enabled: !_sendingBroadcast,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Notification message',
+              alignLabelWithHint: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _sendingBroadcast ? null : _sendBroadcast,
+            icon: _sendingBroadcast
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.send_outlined),
+            label: Text(_sendingBroadcast ? 'Sending...' : 'Send broadcast'),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              border: Border.all(color: Colors.blue.shade100),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Broadcasts create an in-app notification record and also attempt an FCM push to each active device token.',
+            ),
+          ),
         ],
       ),
     );

@@ -107,7 +107,8 @@ class _BillingPageState extends State<BillingPage> {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          context.go('/paywall');
+          // Replace this route with paywall so back button returns to previous page
+          context.pushReplacement('/paywall');
         }
       });
       return;
@@ -326,7 +327,7 @@ class _BillingPageState extends State<BillingPage> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: ElevatedButton.icon(
-                  onPressed: () => context.go('/paywall'),
+                  onPressed: () => context.push('/paywall'),
                   icon: const Icon(Icons.attach_money),
                   label: const Text('Open iOS Paywall'),
                 ),

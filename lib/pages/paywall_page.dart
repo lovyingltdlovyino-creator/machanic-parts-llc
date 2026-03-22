@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 import '../services/revenuecat_service.dart';
 import 'iap_diagnostic_page.dart';
@@ -263,8 +263,12 @@ class _PaywallPageState extends State<PaywallPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             debugPrint('[PaywallPage] Back button pressed');
-            // Try to pop, if it fails, nothing happens (we're at root)
-            Navigator.of(context).pop();
+            final router = GoRouter.of(context);
+            if (router.canPop()) {
+              router.pop();
+            } else {
+              router.go('/home');
+            }
           },
         ),
         actions: [
@@ -360,7 +364,7 @@ class _PaywallPageState extends State<PaywallPage> {
                         ..sort((a, b) => order.indexOf(a).compareTo(order.indexOf(b)));
 
                       // Helper to sort plans by duration keyword
-                      int _rank(String s) {
+                      int rank(String s) {
                         final l = s.toLowerCase();
                         if (l.contains('month') && l.contains('6')) return 30;
                         if (l.contains('quarter')) return 20;
@@ -428,7 +432,7 @@ class _PaywallPageState extends State<PaywallPage> {
                           final dynamic pb = b.storeProduct;
                           final String ida = (pa.identifier ?? pa.productIdentifier ?? '').toString();
                           final String idb = (pb.identifier ?? pb.productIdentifier ?? '').toString();
-                          return _rank(ida).compareTo(_rank(idb));
+                          return rank(ida).compareTo(rank(idb));
                         });
 
                         widgets.addAll(pkgs.map((pkg) {

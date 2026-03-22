@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import '../services/revenuecat_service.dart';
 
 class IAPDiagnosticPage extends StatefulWidget {
   const IAPDiagnosticPage({super.key});
@@ -16,7 +15,8 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
 
   void _log(String message) {
     setState(() {
-      _logs.add('[${DateTime.now().toIso8601String().substring(11, 19)}] $message');
+      _logs.add(
+          '[${DateTime.now().toIso8601String().substring(11, 19)}] $message');
     });
     debugPrint('[IAP Diagnostic] $message');
   }
@@ -31,7 +31,7 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
       // 1. Check platform
       _log('Platform: ${defaultTargetPlatform.toString()}');
       _log('Is Web: $kIsWeb');
-      
+
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
         _log('❌ ERROR: Not on iOS platform');
         return;
@@ -39,7 +39,8 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
       _log('✅ Running on iOS');
 
       // 2. Check if API key is set (from environment)
-      const apiKey = String.fromEnvironment('REVENUECAT_IOS_PUBLIC_SDK_KEY', defaultValue: '');
+      const apiKey = String.fromEnvironment('REVENUECAT_IOS_PUBLIC_SDK_KEY',
+          defaultValue: '');
       if (apiKey.isEmpty) {
         _log('❌ ERROR: REVENUECAT_IOS_PUBLIC_SDK_KEY not set');
         _log('   This should be set via --dart-define during build');
@@ -78,22 +79,23 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
         _log('Offerings fetched successfully');
         _log('All offerings: ${offerings.all.keys.toList()}');
         _log('Current offering ID: ${offerings.current?.identifier ?? "NONE"}');
-        
+
         if (offerings.current == null) {
           _log('❌ ERROR: No current offering set');
           _log('   Go to RevenueCat dashboard and set a "Current" offering');
           return;
         }
-        
+
         _log('✅ Current offering: ${offerings.current!.identifier}');
-        _log('Available packages: ${offerings.current!.availablePackages.length}');
-        
+        _log(
+            'Available packages: ${offerings.current!.availablePackages.length}');
+
         if (offerings.current!.availablePackages.isEmpty) {
           _log('❌ ERROR: Current offering has NO packages');
           _log('   Add packages to the "default" offering in RevenueCat');
           return;
         }
-        
+
         _log('');
         _log('=== PACKAGES ===');
         for (var pkg in offerings.current!.availablePackages) {
@@ -105,36 +107,42 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
           _log('  Description: ${product.description}');
           _log('---');
         }
-        
+
         _log('');
         _log('✅✅✅ DIAGNOSTICS PASSED! ✅✅✅');
         _log('RevenueCat is working correctly!');
-        
       } catch (e, stack) {
         _log('❌❌❌ FATAL ERROR FETCHING OFFERINGS ❌❌❌');
         _log('Error: $e');
         _log('Stack trace:');
         _log(stack.toString());
-        
+
         final errStr = e.toString().toLowerCase();
-        if (errStr.contains('not initialized') || errStr.contains('configure')) {
+        if (errStr.contains('not initialized') ||
+            errStr.contains('configure')) {
           _log('');
           _log('💡 FIX: RevenueCat not initialized properly');
-          _log('   Check main.dart: await RevenueCatService.instance.initialize(apiKey)');
-        } else if (errStr.contains('api key') || errStr.contains('invalid') || errStr.contains('401')) {
+          _log(
+              '   Check main.dart: await RevenueCatService.instance.initialize(apiKey)');
+        } else if (errStr.contains('api key') ||
+            errStr.contains('invalid') ||
+            errStr.contains('401')) {
           _log('');
           _log('💡 FIX: Invalid API Key');
           _log('   1. Check RevenueCat dashboard for correct iOS API key');
           _log('   2. Set REVENUECAT_IOS_PUBLIC_SDK_KEY in Codemagic env vars');
-        } else if (errStr.contains('network') || errStr.contains('connection')) {
+        } else if (errStr.contains('network') ||
+            errStr.contains('connection')) {
           _log('');
           _log('💡 FIX: Network issue');
           _log('   Check internet connection');
         } else if (errStr.contains('product') || errStr.contains('store')) {
           _log('');
           _log('💡 FIX: Product configuration issue');
-          _log('   1. Check all product IDs in RevenueCat match App Store Connect');
-          _log('   2. Ensure Paid Apps Agreement is signed in App Store Connect');
+          _log(
+              '   1. Check all product IDs in RevenueCat match App Store Connect');
+          _log(
+              '   2. Ensure Paid Apps Agreement is signed in App Store Connect');
         }
       }
 
@@ -143,12 +151,13 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
       _log('=== CUSTOMER INFO ===');
       try {
         final customerInfo = await Purchases.getCustomerInfo();
-        _log('Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
-        _log('All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
+        _log(
+            'Active entitlements: ${customerInfo.entitlements.active.keys.toList()}');
+        _log(
+            'All entitlements: ${customerInfo.entitlements.all.keys.toList()}');
       } catch (e) {
         _log('⚠️ Could not get customer info: $e');
       }
-
     } catch (e, stack) {
       _log('❌ Unexpected error: $e');
       _log('Stack: $stack');
@@ -185,7 +194,8 @@ class _IAPDiagnosticPageState extends State<IAPDiagnosticPage> {
                     const SizedBox(height: 16),
                     const Text(
                       'IAP Diagnostics',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     const Text(

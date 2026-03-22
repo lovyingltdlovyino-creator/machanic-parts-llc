@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show TargetPlatform; 
+import 'package:flutter/material.dart' show TargetPlatform;
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 class RevenueCatService {
@@ -19,13 +19,13 @@ class RevenueCatService {
     try {
       // Set log level to debug for better troubleshooting
       await Purchases.setLogLevel(LogLevel.debug);
-      
+
       // Configure RevenueCat
       final configuration = PurchasesConfiguration(iosPublicSdkKey);
       await Purchases.configure(configuration);
-      
+
       _initialized = true;
-      
+
       // Log success
       debugPrint('[RevenueCat] Successfully initialized');
     } catch (e) {
@@ -35,7 +35,8 @@ class RevenueCatService {
   }
 
   Future<void> identify(String appUserId) async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return;
     if (appUserId.isEmpty) return;
     try {
       await Purchases.logIn(appUserId);
@@ -43,34 +44,40 @@ class RevenueCatService {
   }
 
   Future<void> logout() async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return;
     try {
       await Purchases.logOut();
     } catch (_) {}
   }
 
   Future<Offerings?> getOfferings() async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
-      throw Exception('RevenueCat not initialized or not supported on this platform');
+    if (!_initialized ||
+        kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.iOS) {
+      throw Exception(
+          'RevenueCat not initialized or not supported on this platform');
     }
     try {
       debugPrint('[RevenueCat] Fetching offerings...');
       final offerings = await Purchases.getOfferings();
-      
+
       if (offerings?.current == null) {
-        debugPrint('[RevenueCat] No current offering found. Please configure offerings in RevenueCat dashboard.');
+        debugPrint(
+            '[RevenueCat] No current offering found. Please configure offerings in RevenueCat dashboard.');
         return offerings;
       }
-      
+
       final packageCount = offerings?.current?.availablePackages.length ?? 0;
       debugPrint('[RevenueCat] Current offering has $packageCount packages');
-      
+
       // Log each package for debugging
       offerings?.current?.availablePackages.forEach((pkg) {
         final product = pkg.storeProduct;
-        debugPrint('[RevenueCat] Package: ${pkg.identifier}, Product: ${product.identifier}');
+        debugPrint(
+            '[RevenueCat] Package: ${pkg.identifier}, Product: ${product.identifier}');
       });
-      
+
       return offerings;
     } catch (e) {
       debugPrint('[RevenueCat] Failed to get offerings: $e');
@@ -79,7 +86,8 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> purchasePackage(Package pkg) async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return null;
     try {
       // Use dynamic to support multiple SDK shapes
       final dynamic result = await Purchases.purchasePackage(pkg);
@@ -89,7 +97,7 @@ class RevenueCatService {
         return info;
       } catch (_) {
         // Older SDKs returned CustomerInfo directly
-        if (result is CustomerInfo) return result as CustomerInfo;
+        if (result is CustomerInfo) return result;
         return null;
       }
     } catch (_) {
@@ -98,7 +106,8 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> restorePurchases() async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return null;
     try {
       return await Purchases.restorePurchases();
     } catch (_) {
@@ -107,7 +116,8 @@ class RevenueCatService {
   }
 
   Future<CustomerInfo?> getCustomerInfo() async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return null;
     try {
       return await Purchases.getCustomerInfo();
     } catch (_) {
@@ -117,7 +127,8 @@ class RevenueCatService {
 
   // Lightweight cache to avoid spamming the SDK
   Future<CustomerInfo?> ensureCustomerInfo({bool forceRefresh = false}) async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return null;
     final now = DateTime.now();
     if (!forceRefresh && _cachedCustomerInfo != null && _lastFetchAt != null) {
       if (now.difference(_lastFetchAt!).inSeconds < 60) {
@@ -131,7 +142,8 @@ class RevenueCatService {
   }
 
   Future<bool> hasAnyEntitlement(Set<String> entitlementIds) async {
-    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return false;
+    if (!_initialized || kIsWeb || defaultTargetPlatform != TargetPlatform.iOS)
+      return false;
     final info = await ensureCustomerInfo();
     if (info == null) return false;
     final active = info.entitlements.active.keys.toSet();

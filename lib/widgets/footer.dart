@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 
@@ -47,7 +46,8 @@ class Footer extends StatelessWidget {
                               color: Color(0xFF0052CC),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.build_rounded, color: Colors.white, size: 18),
+                            child: const Icon(Icons.build_rounded,
+                                color: Colors.white, size: 18),
                           );
                         },
                       ),
@@ -64,7 +64,7 @@ class Footer extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Navigation Links - Centered
                 Wrap(
                   alignment: WrapAlignment.center,
@@ -81,7 +81,7 @@ class Footer extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                
+
                 // CTA Button
                 SizedBox(
                   height: 36,
@@ -90,7 +90,8 @@ class Footer extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0052CC),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -106,7 +107,7 @@ class Footer extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Copyright - Centered
                 Text(
                   '© $year Mechanic Part LLC. All rights reserved.',
