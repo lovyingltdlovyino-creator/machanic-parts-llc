@@ -322,6 +322,61 @@ workflows:
         submit_to_testflight: true
         beta_groups: ["Testers"]
 
+  android_play_store:
+    name: Android Play Store (AAB)
+    instance_type: linux_x2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      groups:
+        - supabase_env          # SUPABASE_URL, SUPABASE_ANON_KEY
+        - revenuecat_env        # REVENUECAT_ANDROID_PUBLIC_SDK_KEY (optional)
+        - android_signing       # CM_KEYSTORE, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD
+      vars:
+        PACKAGE_NAME: com.mechanicpart.mechanic_part
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+      cancel_previous_builds: true
+    scripts:
+      - name: Flutter version
+        script: flutter --version
+      - name: Dependencies
+        script: flutter pub get
+      - name: Create .env from CI variables
+        script: |
+          echo "SUPABASE_URL=$SUPABASE_URL" > .env
+          echo "SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" >> .env
+          echo ".env created"
+      - name: Set up Android keystore
+        script: |
+          echo "$CM_KEYSTORE" | base64 --decode > android/app/keystore.jks
+          cat > android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=app/keystore.jks
+          EOF
+          echo "Keystore configured"
+      - name: Build Android AAB (release)
+        script: |
+          flutter build appbundle --release \
+            --dart-define SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          echo "AAB built at: $(find build/app/outputs/bundle/release -name '*.aab')"
+    artifacts:
+      - build/app/outputs/bundle/release/app-release.aab
+      - build/app/outputs/mapping/release/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+
   ipad_screenshots:
     name: iPad Screenshots (Personal Plan)
     instance_type: mac_mini_m1
