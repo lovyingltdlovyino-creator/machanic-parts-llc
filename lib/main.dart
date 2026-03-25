@@ -1,3 +1,4 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -175,6 +176,35 @@ Future<void> main() async {
       }
     });
   } catch (_) {}
+
+  // Handle incoming deep links (e.g. mechanicpart://reset-password?...)
+  // This is what actually triggers the passwordRecovery auth event on mobile.
+  if (!kIsWeb) {
+    try {
+      final appLinks = AppLinks();
+      // App launched from a cold start via a deep link
+      final initialUri = await appLinks.getInitialLink();
+      if (initialUri != null) {
+        // ignore: avoid_print
+        print('[DeepLink] Initial link: $initialUri');
+        await Supabase.instance.client.auth.getSessionFromUrl(initialUri);
+      }
+      // App already running and receives a deep link
+      appLinks.uriLinkStream.listen((uri) async {
+        // ignore: avoid_print
+        print('[DeepLink] Incoming link: $uri');
+        try {
+          await Supabase.instance.client.auth.getSessionFromUrl(uri);
+        } catch (e) {
+          // ignore: avoid_print
+          print('[DeepLink] getSessionFromUrl failed: $e');
+        }
+      });
+    } catch (e) {
+      // ignore: avoid_print
+      print('[DeepLink] app_links setup failed: $e');
+    }
+  }
 
   // Initialize notification service (skip during screenshot builds)
   const skipNotifications =
@@ -9265,12 +9295,14 @@ class _AuthPageState extends State<AuthPage> {
     }
     try {
       setState(() => _loading = true);
-      // Use the current URL origin for web, or construct the reset password URL
-      String? redirect;
+      // Web: redirect to the hosted reset-password page.
+      // Mobile: redirect to the app via custom URL scheme so the deep link
+      // handler can call getSessionFromUrl() and fire passwordRecovery.
+      final String? redirect;
       if (kIsWeb) {
-        final origin = Uri.base.origin;
-        // Ensure we're using the full URL with the reset-password path
-        redirect = '$origin/reset-password';
+        redirect = '${Uri.base.origin}/reset-password';
+      } else {
+        redirect = 'mechanicpart://reset-password';
       }
       await Supabase.instance.client.auth
           .resetPasswordForEmail(email, redirectTo: redirect);
