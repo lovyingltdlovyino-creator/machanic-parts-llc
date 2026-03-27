@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "75U4C4C87J.com.mechanicpart.mechanicPart",
+        "paths": [
+          "/reset-password*",
+          "/auth*",
+          "/auth/callback*"
+        ]
+      }
+    ]
+  }
+}
