@@ -9301,6 +9301,10 @@ class _AuthPageState extends State<AuthPage> {
       final String? redirect;
       if (kIsWeb) {
         redirect = '${Uri.base.origin}/reset-password';
+      } else if (Platform.isIOS) {
+        // Universal Links: iOS intercepts this HTTPS URL and opens the app
+        // (requires Associated Domains entitlement + AASA file on the server)
+        redirect = 'https://mechanicpartllc.com/reset-password';
       } else {
         redirect = 'mechanicpart://reset-password';
       }
